@@ -27,6 +27,30 @@ type Match = {
 
 type Business = { id: string; name: string };
 
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  height: 44,
+  padding: '0 var(--s-4)',
+  borderRadius: 'var(--r-sm)',
+  border: '1px solid var(--line-strong)',
+  background: 'var(--surface)',
+  color: 'var(--ink)',
+  fontSize: 'var(--t-body)',
+  font: 'inherit',
+  outline: 'none',
+};
+
+const labelStyle: React.CSSProperties = {
+  display: 'block',
+  fontSize: 'var(--t-small)',
+  fontWeight: 500,
+  color: 'var(--muted)',
+  marginBottom: 'var(--s-2)',
+};
+
+const materialLabel = (cat: string) =>
+  cat.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+
 export default function RecyclingExchange() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
@@ -66,134 +90,237 @@ export default function RecyclingExchange() {
     load();
   };
 
-  const materialLabel = (cat: string) =>
-    cat.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">♻️ Industrial Recycling Exchange</h1>
-          <p className="text-gray-500 text-sm mt-1">Post excess materials or request raw inputs — AI matches compatible businesses.</p>
-        </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-lg text-sm font-medium"
-        >
-          + New Listing
-        </button>
-      </div>
-
-      {/* New listing form */}
-      {showForm && (
-        <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-xl p-6 mb-8 shadow-sm">
-          <h2 className="font-semibold text-gray-700 mb-4">Create a Listing</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <>
+      {/* ── PAGE HEADER ──────────────────────────────────────────────────────── */}
+      <section
+        style={{
+          paddingTop: 'calc(var(--nav) + var(--padt))',
+          paddingBottom: 'var(--padb)',
+          background: 'var(--bg)',
+          minHeight: '40svh',
+        }}
+      >
+        <div style={{ width: 'min(100% - 2 * var(--gut), var(--container))', margin: '0 auto' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 'var(--s-5)', flexWrap: 'wrap' }}>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Business</label>
-              <select required value={form.businessId} onChange={(e) => setForm({ ...form, businessId: e.target.value })}
-                className="w-full border rounded-lg px-3 py-2 text-sm">
-                <option value="">Select…</option>
-                {businesses.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-              </select>
+              <h1 style={{ fontSize: 'var(--t-h1)', fontWeight: 500, letterSpacing: '-0.03em', lineHeight: 1.04, marginBottom: 'var(--s-4)' }}>
+                Industrial Recycling Exchange
+              </h1>
+              <p style={{ fontSize: 'var(--t-lead)', color: 'var(--muted)', maxWidth: '52ch' }}>
+                Post excess materials or request raw inputs. AI matches compatible Michigan businesses.
+              </p>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-              <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}
-                className="w-full border rounded-lg px-3 py-2 text-sm">
-                <option value="offering">Offering (I have excess)</option>
-                <option value="requesting">Requesting (I need this)</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Material Category</label>
-              <select value={form.materialCategory} onChange={(e) => setForm({ ...form, materialCategory: e.target.value })}
-                className="w-full border rounded-lg px-3 py-2 text-sm">
-                {['wood_lumber', 'metal_scrap', 'plastic', 'cardboard_paper', 'food_byproduct', 'textile', 'other'].map((c) => (
-                  <option key={c} value={c}>{materialLabel(c)}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-              <input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}
-                className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="e.g. Excess wood chips — 2 tons/week" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
-              <input type="number" required value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })}
-                className="w-full border rounded-lg px-3 py-2 text-sm" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
-              <input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })}
-                className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="lbs, tons, pallets…" />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-              <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
-                rows={2} className="w-full border rounded-lg px-3 py-2 text-sm" />
-            </div>
+            <button
+              onClick={() => setShowForm(!showForm)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 'var(--s-2)',
+                height: 'var(--btn-h)', padding: '0 var(--s-5)',
+                borderRadius: 'var(--r-btn)', border: '1px solid transparent',
+                font: '500 var(--t-body)/1 var(--font-text)',
+                background: 'var(--action)', color: 'var(--action-ink)',
+                flexShrink: 0,
+              }}
+            >
+              {showForm ? 'Cancel' : 'Post a listing'}
+            </button>
           </div>
-          <div className="flex gap-3 mt-4">
-            <button type="submit" className="bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-lg text-sm font-medium">Post Listing</button>
-            <button type="button" onClick={() => setShowForm(false)} className="border px-4 py-2 rounded-lg text-sm">Cancel</button>
-          </div>
-        </form>
-      )}
 
-      {/* Listings grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
-        {listings.length === 0 && <p className="text-gray-400 col-span-2">No active listings yet.</p>}
-        {listings.map((l) => (
-          <div key={l.id} className={`bg-white border rounded-xl p-4 shadow-sm ${l.type === 'offering' ? 'border-l-4 border-l-green-500' : 'border-l-4 border-l-blue-500'}`}>
-            <div className="flex items-center justify-between mb-1">
-              <span className={`text-xs font-semibold uppercase px-2 py-0.5 rounded-full ${l.type === 'offering' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
-                {l.type === 'offering' ? '↑ Offering' : '↓ Requesting'}
-              </span>
-              <span className="text-xs text-gray-400">{materialLabel(l.materialCategory)}</span>
-            </div>
-            <h3 className="font-semibold text-gray-800 mt-2">{l.title}</h3>
-            <p className="text-sm text-gray-500 mt-1">{l.description}</p>
-            <div className="mt-3 flex items-center gap-4 text-xs text-gray-500">
-              <span>📍 {l.location.city}, {l.location.state}</span>
-              <span>⚖️ {l.quantity} {l.unit}</span>
-              <span className={`ml-auto px-2 py-0.5 rounded-full font-medium ${l.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                {l.status}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* AI Matches */}
-      {matches.length > 0 && (
-        <div>
-          <h2 className="text-xl font-bold text-gray-800 mb-4">🤖 AI-Suggested Matches</h2>
-          <div className="space-y-4">
-            {matches.map((m) => (
-              <div key={m.id} className="bg-white border border-yellow-200 rounded-xl p-5 shadow-sm">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-semibold text-gray-800">{m.offeringBusiness} → {m.requestingBusiness}</span>
-                  <span className="text-sm font-bold text-green-700">Score: {m.compatibilityScore}%</span>
+          {/* New listing form */}
+          {showForm && (
+            <form
+              onSubmit={handleSubmit}
+              style={{
+                marginTop: 'var(--s-7)',
+                padding: 'var(--s-7)',
+                borderRadius: 'var(--r-lg)',
+                border: '1px solid var(--line)',
+                background: 'var(--surface)',
+              }}
+            >
+              <h2 style={{ fontSize: 'var(--t-h3)', fontWeight: 500, letterSpacing: '-0.02em', marginBottom: 'var(--s-6)' }}>
+                Create a listing
+              </h2>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--s-5)', marginBottom: 'var(--s-5)' }}>
+                <div>
+                  <label style={labelStyle}>Business</label>
+                  <select required value={form.businessId} onChange={(e) => setForm({ ...form, businessId: e.target.value })} style={inputStyle}>
+                    <option value="">Select…</option>
+                    {businesses.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                  </select>
                 </div>
-                <p className="text-sm text-gray-600 mb-3">{m.aiReasoning}</p>
-                <div className="flex gap-2">
-                  {m.status === 'pending' && (
-                    <button onClick={() => handleAccept(m)}
-                      className="bg-green-700 hover:bg-green-800 text-white text-sm px-3 py-1.5 rounded-lg font-medium">
-                      ✅ Accept Match
-                    </button>
-                  )}
-                  <span className={`text-xs px-2 py-1 rounded-full font-medium ${m.status === 'accepted' ? 'bg-green-100 text-green-700' : m.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'}`}>
-                    {m.status}
-                  </span>
+                <div>
+                  <label style={labelStyle}>Listing type</label>
+                  <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} style={inputStyle}>
+                    <option value="offering">Offering — I have excess</option>
+                    <option value="requesting">Requesting — I need this</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>Material category</label>
+                  <select value={form.materialCategory} onChange={(e) => setForm({ ...form, materialCategory: e.target.value })} style={inputStyle}>
+                    {['wood_lumber', 'metal_scrap', 'plastic', 'cardboard_paper', 'food_byproduct', 'textile', 'other'].map((c) => (
+                      <option key={c} value={c}>{materialLabel(c)}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>Title</label>
+                  <input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} style={inputStyle} placeholder="e.g. Excess wood chips — 2 tons/week" />
+                </div>
+                <div>
+                  <label style={labelStyle}>Quantity</label>
+                  <input type="number" required value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} style={inputStyle} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Unit</label>
+                  <input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} style={inputStyle} placeholder="lbs, tons, pallets…" />
+                </div>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={labelStyle}>Description</label>
+                  <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2}
+                    style={{ ...inputStyle, height: 'auto', padding: 'var(--s-3) var(--s-4)', resize: 'vertical' }} />
                 </div>
               </div>
-            ))}
-          </div>
+              <div style={{ display: 'flex', gap: 'var(--s-3)' }}>
+                <button type="submit" style={{
+                  display: 'inline-flex', alignItems: 'center', height: 'var(--btn-h)', padding: '0 var(--s-5)',
+                  borderRadius: 'var(--r-btn)', border: '1px solid transparent',
+                  font: '500 var(--t-body)/1 var(--font-text)',
+                  background: 'var(--action)', color: 'var(--action-ink)',
+                }}>Post listing</button>
+                <button type="button" onClick={() => setShowForm(false)} style={{
+                  display: 'inline-flex', alignItems: 'center', height: 'var(--btn-h)', padding: '0 var(--s-5)',
+                  borderRadius: 'var(--r-btn)', border: '1px solid var(--line-strong)',
+                  font: '500 var(--t-body)/1 var(--font-text)',
+                  background: 'var(--bg)', color: 'var(--ink)',
+                }}>Cancel</button>
+              </div>
+            </form>
+          )}
         </div>
+      </section>
+
+      {/* ── LISTINGS ──────────────────────────────────────────────────────────── */}
+      <section style={{ padding: 'var(--padt) 0 var(--padb)', background: 'var(--surface)', minHeight: '50svh' }}>
+        <div style={{ width: 'min(100% - 2 * var(--gut), var(--container))', margin: '0 auto' }}>
+          <div style={{ marginBottom: 'var(--head-gap)' }}>
+            <h2 style={{ fontSize: 'var(--t-h2)', fontWeight: 500, letterSpacing: '-0.025em', marginBottom: 'var(--s-3)' }}>Active listings</h2>
+          </div>
+          {listings.length === 0 ? (
+            <p style={{ color: 'var(--muted)', fontSize: 'var(--t-body)' }}>No active listings yet. Post one above.</p>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: 'var(--card-gap)' }}>
+              {listings.map((l) => (
+                <ListingCard key={l.id} listing={l} />
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ── AI MATCHES ───────────────────────────────────────────────────────── */}
+      {matches.length > 0 && (
+        <section style={{ padding: 'var(--padt) 0 var(--padb)', background: 'var(--bg)', minHeight: '50svh' }}>
+          <div style={{ width: 'min(100% - 2 * var(--gut), var(--container))', margin: '0 auto' }}>
+            <div style={{ marginBottom: 'var(--head-gap)' }}>
+              <h2 style={{ fontSize: 'var(--t-h2)', fontWeight: 500, letterSpacing: '-0.025em', marginBottom: 'var(--s-3)' }}>AI-suggested matches</h2>
+              <p style={{ fontSize: 'var(--t-lead)', color: 'var(--muted)', maxWidth: '52ch' }}>
+                Reviewed and scored by the matching engine. Accept to begin the exchange.
+              </p>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--card-gap)' }}>
+              {matches.map((m) => (
+                <div
+                  key={m.id}
+                  style={{
+                    display: 'flex', flexDirection: 'column', gap: 'var(--s-4)',
+                    padding: 'var(--s-6)',
+                    borderRadius: 'var(--r-lg)',
+                    border: '1px solid var(--line)',
+                    background: 'var(--surface)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--s-4)', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 'var(--t-body)', fontWeight: 500, color: 'var(--ink)' }}>
+                      {m.offeringBusiness} → {m.requestingBusiness}
+                    </span>
+                    <span style={{
+                      padding: '3px 10px', borderRadius: 999,
+                      background: 'color-mix(in oklab, #22c55e 15%, transparent)',
+                      color: '#22c55e', fontSize: 'var(--t-label)', fontWeight: 500,
+                    }}>
+                      {m.compatibilityScore}% match
+                    </span>
+                  </div>
+                  <p style={{ fontSize: 'var(--t-body)', color: 'var(--muted)', lineHeight: 1.6, maxWidth: '72ch' }}>{m.aiReasoning}</p>
+                  <div style={{ display: 'flex', gap: 'var(--s-3)', alignItems: 'center', flexWrap: 'wrap' }}>
+                    {m.status === 'pending' && (
+                      <button
+                        onClick={() => handleAccept(m)}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', height: 'var(--btn-h)', padding: '0 var(--s-5)',
+                          borderRadius: 'var(--r-btn)', border: '1px solid transparent',
+                          font: '500 var(--t-body)/1 var(--font-text)',
+                          background: 'var(--action)', color: 'var(--action-ink)',
+                        }}
+                      >
+                        Accept match →
+                      </button>
+                    )}
+                    <span style={{
+                      padding: '3px 10px', borderRadius: 999,
+                      border: '1px solid var(--line)',
+                      fontSize: 'var(--t-label)', fontWeight: 500,
+                      color: m.status === 'accepted' ? '#22c55e' : 'var(--muted)',
+                    }}>
+                      {m.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
       )}
+    </>
+  );
+}
+
+function ListingCard({ listing: l }: { listing: Listing }) {
+  return (
+    <div
+      style={{
+        display: 'flex', flexDirection: 'column', gap: 'var(--s-3)',
+        padding: 'var(--s-5)',
+        borderRadius: 'var(--r-lg)',
+        border: '1px solid var(--line)',
+        borderLeft: `3px solid ${l.type === 'offering' ? '#22c55e' : '#3b82f6'}`,
+        background: 'var(--card)',
+        transition: 'transform 180ms',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--s-3)' }}>
+        <span style={{
+          padding: '3px 10px', borderRadius: 999, fontSize: 'var(--t-label)', fontWeight: 500,
+          background: l.type === 'offering' ? 'color-mix(in oklab, #22c55e 15%, transparent)' : 'color-mix(in oklab, #3b82f6 15%, transparent)',
+          color: l.type === 'offering' ? '#22c55e' : '#3b82f6',
+        }}>
+          {l.type === 'offering' ? '↑ Offering' : '↓ Requesting'}
+        </span>
+        <span style={{ fontSize: 'var(--t-small)', color: 'var(--muted)' }}>{materialLabel(l.materialCategory)}</span>
+      </div>
+      <h3 style={{ fontSize: 'var(--t-body)', fontWeight: 500, color: 'var(--ink)' }}>{l.title}</h3>
+      {l.description && <p style={{ fontSize: 'var(--t-small)', color: 'var(--muted)', lineHeight: 1.5 }}>{l.description}</p>}
+      <div style={{ display: 'flex', gap: 'var(--s-4)', flexWrap: 'wrap', marginTop: 'var(--s-1)' }}>
+        <span style={{ fontSize: 'var(--t-small)', color: 'var(--muted)' }}>{l.location.city}, {l.location.state}</span>
+        <span style={{ fontSize: 'var(--t-small)', color: 'var(--muted)' }}>{l.quantity} {l.unit}</span>
+        <span style={{
+          marginLeft: 'auto', padding: '2px 8px', borderRadius: 999, fontSize: 'var(--t-label)', fontWeight: 500,
+          background: l.status === 'active' ? 'color-mix(in oklab, #22c55e 12%, transparent)' : 'color-mix(in oklab, var(--accent) 12%, transparent)',
+          color: l.status === 'active' ? '#22c55e' : 'var(--accent)',
+        }}>{l.status}</span>
+      </div>
     </div>
   );
 }
