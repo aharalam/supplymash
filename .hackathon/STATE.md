@@ -40,3 +40,9 @@ Update after meaningful milestones and actual end-to-end tests. A passing build 
 - Applied Impeccable and anti-ui-slop: live operational overview replaces promotional hero; self-hosted DM Sans, consistent typography, spacing, navigation, form labels, status colors, and mobile layouts.
 - Frontend production build passes. Lint completes with three warnings (legacy public script, Next metadata export, dashboard fetching effect).
 - Browser inspection attempted but host unavailable; desktop/mobile visual QA and full interaction rehearsal remain unverified. This does not update the last verified demo.
+
+## Frontend wired to order-first stubs — 2026-11-13
+- New `/orders` screen (docs/FRONTEND_HANDOFF.md): persona switcher in the nav (sets `X-Business-Id`, "SupplyMash operator" = no header), place-order form, order result card (parsed lines, parsedBy tag, pool progress, solo vs pooled savings, scrap offers), your orders, scrap offer inbox (accept/decline for holders only), operator pool table with Close pool → PO email + invoices, metrics strip, and a quiet "Reset demo data" button.
+- Shared shapes in `frontend/src/api/types.ts`, copied from `backend/src/types`. Legacy pages unchanged apart from the nav.
+- Verified in the browser against the backend stubs: operator close pool, business order placement, and accept (shows the expected "Match not found" until backend prompt 6). Desktop, 900px and 375px layouts checked with no horizontal page scroll. Typecheck, lint (no new warnings) and production build pass.
+- Not verified: real data (stubs ignore input; IDs don't line up until backend prompt 2). This is not a verified end-to-end demo.
