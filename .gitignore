@@ -1,0 +1,29 @@
+﻿.impeccable/
+.claude/settings.local.json
+.agents/skills/impeccable/scripts/bin/
+.claude/skills/impeccable/scripts/bin/
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build output
+dist/
+**/dist/
+
+# Environment files
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# Logs
+*.log
+npm-debug.log*
+
+# Local-only event reference media; do not stage
+/resources/
+
+# OS
+.DS_Store
+Thumbs.db
