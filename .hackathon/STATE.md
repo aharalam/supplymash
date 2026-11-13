@@ -27,3 +27,16 @@
 - Submission / rehearsal status: Not started
 
 Update after meaningful milestones and actual end-to-end tests. A passing build is not a verified demo. Do not claim a commit hash validates uncommitted changes.
+
+## Next.js migration checkpoint — 2026-11-13
+- Pulled origin/main through d4fd262 with local changes preserved via autostash.
+- Frontend migrated to Next.js App Router; Express API retained through /api rewrites.
+- Production build and TypeScript validation pass. All five routes and proxied /api/health respond HTTP 200 on http://localhost:5174.
+- Fixed corrupted UTF-8 punctuation in screen components, replaced navigation with Next links and active-route states, added hover/focus/press feedback, compact footer, mobile navigation, and responsive registration layout.
+- Full visual browser and end-to-end demo verification still pending. This is not a verified demo checkpoint.
+- New order-first backend specification is present; its new endpoint implementations have not landed in this pull.
+
+## Premium UI pass — 2026-11-13
+- Applied Impeccable and anti-ui-slop: live operational overview replaces promotional hero; self-hosted DM Sans, consistent typography, spacing, navigation, form labels, status colors, and mobile layouts.
+- Frontend production build passes. Lint completes with three warnings (legacy public script, Next metadata export, dashboard fetching effect).
+- Browser inspection attempted but host unavailable; desktop/mobile visual QA and full interaction rehearsal remain unverified. This does not update the last verified demo.

@@ -1,32 +1,12 @@
-# React + TypeScript + Vite
+# SupplyMash frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Next.js App Router + React + TypeScript + Tailwind CSS.
 
-Currently, two official plugins are available:
+Run `npm install`, then `npm run dev` (http://localhost:5173).
+Start the Express backend separately on port 3001. Next.js proxies `/api/*` to it; set `API_URL` to override the backend origin before building or starting development.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Production: `npm run build`, then `npm start`.
+Validation: `npm run typecheck` and `npm run lint`.
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
-```
-
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Routes: `/`, `/recycling`, `/order-pooling`, `/warehouses`, `/register`.
+Client screen components live in `src/screens`; route files and shared layout live in `src/app`.

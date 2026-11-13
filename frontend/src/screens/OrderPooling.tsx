@@ -1,3 +1,4 @@
+'use client';
 import { useEffect, useState } from 'react';
 import { orderPoolsApi, businessApi } from '../api';
 
@@ -33,13 +34,14 @@ const btnSecondary: React.CSSProperties = {
 };
 
 const statusColors: Record<string, { bg: string; color: string }> = {
-  open:      { bg: 'color-mix(in oklab, #22c55e 15%, transparent)', color: '#22c55e' },
-  forming:   { bg: 'color-mix(in oklab, #f59e0b 15%, transparent)', color: '#f59e0b' },
-  confirmed: { bg: 'color-mix(in oklab, #3b82f6 15%, transparent)', color: '#3b82f6' },
+  open:      { bg: 'color-mix(in oklab, #246444 15%, transparent)', color: '#246444' },
+  forming:   { bg: 'color-mix(in oklab, #88591b 15%, transparent)', color: '#88591b' },
+  confirmed: { bg: 'color-mix(in oklab, #315e86 15%, transparent)', color: '#315e86' },
   delivered: { bg: 'color-mix(in oklab, var(--ink) 10%, transparent)', color: 'var(--muted)' },
 };
 
 export default function OrderPooling() {
+  const [requestError, setRequestError] = useState('');
   const [pools, setPools] = useState<OrderPool[]>([]);
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [showCreate, setShowCreate] = useState(false);
@@ -49,11 +51,13 @@ export default function OrderPooling() {
   const [joinForm, setJoinForm] = useState({ businessId: '', itemDescription: '', quantity: '', unit: 'units' });
 
   const load = () =>
-    Promise.all([orderPoolsApi.list(), businessApi.list()]).then(([p, b]) => { setPools(p); setBusinesses(b); });
+    Promise.all([orderPoolsApi.list(), businessApi.list()]).then(([p, b]) => { setRequestError(''); setPools(p); setBusinesses(b); }).catch(() => { setRequestError('Unable to load data. Make sure the backend is running on port 3001, then retry.'); });
 
   useEffect(() => { load(); }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
+    setRequestError('');
+    try {
     e.preventDefault();
     await orderPoolsApi.create({
       title: createForm.title, supplier: createForm.supplier,
@@ -62,49 +66,58 @@ export default function OrderPooling() {
     });
     setShowCreate(false);
     load();
+    } catch {
+      setRequestError('The request could not be completed. Check your connection and try again; your form has been kept.');
+    }
   };
 
   const handleJoin = async (e: React.FormEvent) => {
+    setRequestError('');
+    try {
     e.preventDefault();
     if (!joinPoolId) return;
     await orderPoolsApi.join(joinPoolId, { ...joinForm, quantity: Number(joinForm.quantity) });
     setJoinPoolId(null);
     load();
+    } catch {
+      setRequestError('The request could not be completed. Check your connection and try again; your form has been kept.');
+    }
   };
 
   return (
     <>
+      {requestError && <div role="alert" className="request-error">{requestError} <button type="button" onClick={() => { void load(); }}>Retry connection</button></div>}
       {/* ── PAGE HEADER ──────────────────────────────────────────────────────── */}
-      <section style={{ paddingTop: 'calc(var(--nav) + var(--padt))', paddingBottom: 'var(--padb)', background: 'var(--bg)', minHeight: '40svh' }}>
+      <section style={{ paddingTop: 'calc(var(--nav) + 48px)', paddingBottom: '40px', background: 'var(--bg)', minHeight: 'auto' }}>
         <div style={{ width: 'min(100% - 2 * var(--gut), var(--container))', margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 'var(--s-5)', flexWrap: 'wrap' }}>
             <div>
               <h1 style={{ fontSize: 'var(--t-h1)', fontWeight: 500, letterSpacing: '-0.03em', lineHeight: 1.04, marginBottom: 'var(--s-4)' }}>
-                Local Order Pooling
+                Order pooling
               </h1>
               <p style={{ fontSize: 'var(--t-lead)', color: 'var(--muted)', maxWidth: '52ch' }}>
                 Combine orders with nearby businesses from the same supplier. Split delivery costs, unlock better pricing.
               </p>
             </div>
-            <button onClick={() => setShowCreate(!showCreate)} style={btnPrimary}>
+            <button onClick={() => setShowCreate(!showCreate)} className="page-cta" style={btnPrimary}>
               {showCreate ? 'Cancel' : 'Create a pool'}
             </button>
           </div>
 
           {showCreate && (
-            <form onSubmit={handleCreate} style={{ marginTop: 'var(--s-7)', padding: 'var(--s-7)', borderRadius: 'var(--r-lg)', border: '1px solid var(--line)', background: 'var(--surface)' }}>
+            <form onSubmit={handleCreate} style={{ marginTop: 'var(--s-7)', padding: 'clamp(20px, 4vw, 40px)', borderRadius: 'var(--r-lg)', border: '1px solid var(--line)', background: 'var(--surface)' }}>
               <h2 style={{ fontSize: 'var(--t-h3)', fontWeight: 500, letterSpacing: '-0.02em', marginBottom: 'var(--s-6)' }}>Create order pool</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--s-5)', marginBottom: 'var(--s-5)' }}>
-                <div><label style={labelStyle}>Pool title</label><input required value={createForm.title} onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })} style={inputStyle} placeholder="e.g. Detroit cleaning supplies run" /></div>
-                <div><label style={labelStyle}>Supplier</label><input required value={createForm.supplier} onChange={(e) => setCreateForm({ ...createForm, supplier: e.target.value })} style={inputStyle} placeholder="e.g. Sysco, Costco Business" /></div>
-                <div><label style={labelStyle}>Category</label><input required value={createForm.category} onChange={(e) => setCreateForm({ ...createForm, category: e.target.value })} style={inputStyle} placeholder="e.g. cleaning supplies" /></div>
-                <div><label style={labelStyle}>Order deadline</label><input type="date" required value={createForm.deadline} onChange={(e) => setCreateForm({ ...createForm, deadline: e.target.value })} style={inputStyle} /></div>
-                <div><label style={labelStyle}>City</label><input required value={createForm.city} onChange={(e) => setCreateForm({ ...createForm, city: e.target.value })} style={inputStyle} /></div>
-                <div><label style={labelStyle}>ZIP code</label><input required value={createForm.zipCode} onChange={(e) => setCreateForm({ ...createForm, zipCode: e.target.value })} style={inputStyle} /></div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: 'var(--s-5)', marginBottom: 'var(--s-5)' }}>
+                <div><label htmlFor="orderpooling-field-1" style={labelStyle}>Pool title</label><input id="orderpooling-field-1" required value={createForm.title} onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })} style={inputStyle} placeholder="e.g. Detroit cleaning supplies run" /></div>
+                <div><label htmlFor="orderpooling-field-2" style={labelStyle}>Supplier</label><input id="orderpooling-field-2" required value={createForm.supplier} onChange={(e) => setCreateForm({ ...createForm, supplier: e.target.value })} style={inputStyle} placeholder="e.g. Sysco, Costco Business" /></div>
+                <div><label htmlFor="orderpooling-field-3" style={labelStyle}>Category</label><input id="orderpooling-field-3" required value={createForm.category} onChange={(e) => setCreateForm({ ...createForm, category: e.target.value })} style={inputStyle} placeholder="e.g. cleaning supplies" /></div>
+                <div><label htmlFor="orderpooling-field-4" style={labelStyle}>Order deadline</label><input id="orderpooling-field-4" type="date" required value={createForm.deadline} onChange={(e) => setCreateForm({ ...createForm, deadline: e.target.value })} style={inputStyle} /></div>
+                <div><label htmlFor="orderpooling-field-5" style={labelStyle}>City</label><input id="orderpooling-field-5" required value={createForm.city} onChange={(e) => setCreateForm({ ...createForm, city: e.target.value })} style={inputStyle} /></div>
+                <div><label htmlFor="orderpooling-field-6" style={labelStyle}>ZIP code</label><input id="orderpooling-field-6" required value={createForm.zipCode} onChange={(e) => setCreateForm({ ...createForm, zipCode: e.target.value })} style={inputStyle} /></div>
               </div>
               <div style={{ display: 'flex', gap: 'var(--s-3)' }}>
-                <button type="submit" style={btnPrimary}>Create pool</button>
-                <button type="button" onClick={() => setShowCreate(false)} style={btnSecondary}>Cancel</button>
+                <button type="submit" className="btn-primary" style={btnPrimary}>Create pool</button>
+                <button type="button" onClick={() => setShowCreate(false)} className="btn-secondary" style={btnSecondary}>Cancel</button>
               </div>
             </form>
           )}
@@ -112,7 +125,7 @@ export default function OrderPooling() {
       </section>
 
       {/* ── POOLS ─────────────────────────────────────────────────────────────── */}
-      <section style={{ padding: 'var(--padt) 0 var(--padb)', background: 'var(--surface)', minHeight: '60svh' }}>
+      <section style={{ padding: '40px 0 64px', background: 'var(--surface)', minHeight: 'auto' }}>
         <div style={{ width: 'min(100% - 2 * var(--gut), var(--container))', margin: '0 auto' }}>
           <div style={{ marginBottom: 'var(--head-gap)' }}>
             <h2 style={{ fontSize: 'var(--t-h2)', fontWeight: 500, letterSpacing: '-0.025em' }}>Open pools</h2>
@@ -124,7 +137,7 @@ export default function OrderPooling() {
               {pools.map((pool) => {
                 const sc = statusColors[pool.status] ?? statusColors.delivered;
                 return (
-                  <div key={pool.id} style={{ padding: 'var(--s-6)', borderRadius: 'var(--r-lg)', border: '1px solid var(--line)', background: 'var(--card)' }}>
+                  <div key={pool.id} className="card-hover" style={{ padding: 'var(--s-6)', borderRadius: 'var(--r-lg)', border: '1px solid var(--line)', background: 'var(--card)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--s-4)', flexWrap: 'wrap', marginBottom: 'var(--s-4)' }}>
                       <h3 style={{ fontSize: 'var(--t-body)', fontWeight: 500, color: 'var(--ink)' }}>{pool.title}</h3>
                       <span style={{ padding: '3px 10px', borderRadius: 999, fontSize: 'var(--t-label)', fontWeight: 500, background: sc.bg, color: sc.color }}>{pool.status}</span>
@@ -158,7 +171,7 @@ export default function OrderPooling() {
                       </div>
                     )}
                     {(pool.status === 'open' || pool.status === 'forming') && (
-                      <button onClick={() => setJoinPoolId(pool.id)} style={{ ...btnPrimary, height: 36, padding: '0 var(--s-4)', fontSize: 'var(--t-small)' }}>
+                      <button onClick={() => setJoinPoolId(pool.id)} className="card-action-btn" style={{ ...btnPrimary, height: 36, padding: '0 var(--s-4)', fontSize: 'var(--t-small)' }}>
                         Join pool →
                       </button>
                     )}
@@ -172,22 +185,22 @@ export default function OrderPooling() {
 
       {/* Join modal */}
       {joinPoolId && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+        <div style={{ position: 'fixed', inset: 0, padding: 16, overflowY: 'auto', background: 'rgba(15,35,27,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
           <form
             onSubmit={handleJoin}
-            style={{ background: 'var(--bg)', borderRadius: 'var(--r-lg)', border: '1px solid var(--line)', padding: 'var(--s-7)', width: 'min(100% - 48px, 480px)', display: 'flex', flexDirection: 'column', gap: 'var(--s-5)' }}
+            style={{ background: 'var(--bg)', borderRadius: 'var(--r-lg)', border: '1px solid var(--line)', padding: 'clamp(20px, 4vw, 40px)', width: 'min(100% - 48px, 480px)', display: 'flex', flexDirection: 'column', gap: 'var(--s-5)' }}
           >
             <h2 style={{ fontSize: 'var(--t-h3)', fontWeight: 500, letterSpacing: '-0.02em' }}>Join order pool</h2>
-            <div><label style={labelStyle}>Business</label>
-              <select required value={joinForm.businessId} onChange={(e) => setJoinForm({ ...joinForm, businessId: e.target.value })} style={inputStyle}>
+            <div><label htmlFor="orderpooling-field-7" style={labelStyle}>Business</label>
+              <select id="orderpooling-field-7" required value={joinForm.businessId} onChange={(e) => setJoinForm({ ...joinForm, businessId: e.target.value })} style={inputStyle}>
                 <option value="">Select…</option>
                 {businesses.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
               </select></div>
-            <div><label style={labelStyle}>What do you need?</label>
-              <input required value={joinForm.itemDescription} onChange={(e) => setJoinForm({ ...joinForm, itemDescription: e.target.value })} style={inputStyle} placeholder="e.g. 10 cases paper towels" /></div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s-4)' }}>
-              <div><label style={labelStyle}>Quantity</label><input type="number" required value={joinForm.quantity} onChange={(e) => setJoinForm({ ...joinForm, quantity: e.target.value })} style={inputStyle} /></div>
-              <div><label style={labelStyle}>Unit</label><input value={joinForm.unit} onChange={(e) => setJoinForm({ ...joinForm, unit: e.target.value })} style={inputStyle} /></div>
+            <div><label htmlFor="orderpooling-field-8" style={labelStyle}>What do you need?</label>
+              <input id="orderpooling-field-8" required value={joinForm.itemDescription} onChange={(e) => setJoinForm({ ...joinForm, itemDescription: e.target.value })} style={inputStyle} placeholder="e.g. 10 cases paper towels" /></div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))', gap: 'var(--s-4)' }}>
+              <div><label htmlFor="orderpooling-field-9" style={labelStyle}>Quantity</label><input id="orderpooling-field-9" type="number" required value={joinForm.quantity} onChange={(e) => setJoinForm({ ...joinForm, quantity: e.target.value })} style={inputStyle} /></div>
+              <div><label htmlFor="orderpooling-field-10" style={labelStyle}>Unit</label><input id="orderpooling-field-10" value={joinForm.unit} onChange={(e) => setJoinForm({ ...joinForm, unit: e.target.value })} style={inputStyle} /></div>
             </div>
             <div style={{ display: 'flex', gap: 'var(--s-3)' }}>
               <button type="submit" style={btnPrimary}>Join pool</button>

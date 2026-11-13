@@ -1,6 +1,8 @@
+'use client';
 import { useState } from 'react';
 import { businessApi } from '../api';
-import { useNavigate, Link } from 'react-router-dom';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 type Feature = 'recycling_exchange' | 'order_pooling' | 'micro_warehouse';
 
@@ -16,7 +18,8 @@ const labelStyle: React.CSSProperties = {
 };
 
 export default function Register() {
-  const navigate = useNavigate();
+  const [requestError, setRequestError] = useState('');
+  const router = useRouter();
   const [form, setForm] = useState({
     name: '', type: 'factory', city: '', state: 'MI', zipCode: '',
     contactEmail: '', description: '',
@@ -39,6 +42,8 @@ export default function Register() {
     }));
 
   const handleSubmit = async (e: React.FormEvent) => {
+    setRequestError('');
+    try {
     e.preventDefault();
     await businessApi.create({
       name: form.name, type: form.type,
@@ -47,14 +52,17 @@ export default function Register() {
       enrolledFeatures: form.enrolledFeatures,
     });
     setSuccess(true);
-    setTimeout(() => navigate('/'), 2000);
+    setTimeout(() => router.push('/'), 2000);
+    } catch {
+      setRequestError('The request could not be completed. Check your connection and try again; your form has been kept.');
+    }
   };
 
   if (success) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80svh', paddingTop: 'var(--nav)', gap: 'var(--s-5)' }}>
-        <div style={{ width: 48, height: 48, borderRadius: 'var(--r-md)', background: 'color-mix(in oklab, #22c55e 15%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <div style={{ width: 48, height: 48, borderRadius: 'var(--r-md)', background: 'color-mix(in oklab, #246444 15%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#246444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M20 6 9 17l-5-5"/>
           </svg>
         </div>
@@ -65,13 +73,13 @@ export default function Register() {
   }
 
   return (
-    <section style={{ paddingTop: 'calc(var(--nav) + var(--padt))', paddingBottom: 'var(--s-10)', background: 'var(--bg)', minHeight: '100svh' }}>
+    <section style={{ paddingTop: 'calc(var(--nav) + 48px)', paddingBottom: 'var(--s-10)', background: 'var(--bg)', minHeight: '100svh' }}>
       <div style={{ width: 'min(100% - 2 * var(--gut), var(--container))', margin: '0 auto' }}>
         {/* split: hero left, form right */}
-        <div style={{ display: 'grid', gridTemplateColumns: '5fr 7fr', columnGap: 'var(--gutter)', alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))', columnGap: 'var(--gutter)', alignItems: 'start' }}>
 
           {/* left: copy */}
-          <div style={{ position: 'sticky', top: 'calc(var(--nav) + var(--s-7))' }}>
+          <div style={{ position: 'relative', top: 0 }}>
             <h1 style={{ fontSize: 'var(--t-h1)', fontWeight: 500, letterSpacing: '-0.03em', lineHeight: 1.04, marginBottom: 'var(--s-5)' }}>
               Join the Michigan supply network
             </h1>
@@ -80,9 +88,9 @@ export default function Register() {
             </p>
             <ul style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)', marginBottom: 'var(--s-7)' }}>
               {[
-                '3 Michigan businesses already enrolled',
-                'No fees until you close a deal',
-                'Withdraw from any program anytime',
+                'Exchange materials with local businesses',
+                'Combine orders to share delivery costs',
+                'Find shared warehouse space',
               ].map((item) => (
                 <li key={item} style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-3)', fontSize: 'var(--t-body)', color: 'var(--muted)' }}>
                   <span style={{ width: 20, height: 20, borderRadius: '50%', background: 'color-mix(in oklab, var(--accent) 15%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -95,7 +103,7 @@ export default function Register() {
               ))}
             </ul>
             <Link
-              to="/"
+              href="/"
               style={{ fontSize: 'var(--t-small)', color: 'var(--muted)', textDecoration: 'underline', textDecorationColor: 'color-mix(in oklab, var(--ink) 20%, transparent)', textUnderlineOffset: 4 }}
             >
               ← Back to network
@@ -106,44 +114,45 @@ export default function Register() {
           <form
             onSubmit={handleSubmit}
             style={{
-              padding: 'var(--s-7)',
+              padding: 'clamp(20px, 4vw, 40px)',
               borderRadius: 'var(--r-lg)',
               border: '1px solid var(--line)',
               background: 'var(--surface)',
               display: 'flex', flexDirection: 'column', gap: 'var(--s-6)',
             }}
           >
+            {requestError && <p role="alert" className="network-error">{requestError}</p>}
             {/* Business info */}
             <div>
               <h2 style={{ fontSize: 'var(--t-h3)', fontWeight: 500, letterSpacing: '-0.02em', marginBottom: 'var(--s-5)' }}>Business information</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--s-5)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: 'var(--s-5)' }}>
                 <div style={{ gridColumn: '1 / -1' }}>
-                  <label style={labelStyle}>Business name *</label>
-                  <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} style={inputStyle} placeholder="e.g. Great Lakes Lumber Co." />
+                  <label htmlFor="register-field-1" style={labelStyle}>Business name *</label>
+                  <input id="register-field-1" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} style={inputStyle} placeholder="e.g. Great Lakes Lumber Co." />
                 </div>
                 <div>
-                  <label style={labelStyle}>Business type *</label>
-                  <select required value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} style={inputStyle}>
+                  <label htmlFor="register-field-2" style={labelStyle}>Business type *</label>
+                  <select id="register-field-2" required value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} style={inputStyle}>
                     {['factory', 'farm', 'construction', 'restaurant', 'retailer', 'manufacturer', 'other'].map((t) => (
                       <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label style={labelStyle}>Contact email *</label>
-                  <input required type="email" value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} style={inputStyle} />
+                  <label htmlFor="register-field-3" style={labelStyle}>Contact email *</label>
+                  <input id="register-field-3" required type="email" value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} style={inputStyle} />
                 </div>
                 <div>
-                  <label style={labelStyle}>City *</label>
-                  <input required value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} style={inputStyle} />
+                  <label htmlFor="register-field-4" style={labelStyle}>City *</label>
+                  <input id="register-field-4" required value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} style={inputStyle} />
                 </div>
                 <div>
-                  <label style={labelStyle}>ZIP code *</label>
-                  <input required value={form.zipCode} onChange={(e) => setForm({ ...form, zipCode: e.target.value })} style={inputStyle} />
+                  <label htmlFor="register-field-5" style={labelStyle}>ZIP code *</label>
+                  <input id="register-field-5" required value={form.zipCode} onChange={(e) => setForm({ ...form, zipCode: e.target.value })} style={inputStyle} />
                 </div>
                 <div style={{ gridColumn: '1 / -1' }}>
-                  <label style={labelStyle}>Description</label>
-                  <textarea
+                  <label htmlFor="register-field-6" style={labelStyle}>Description</label>
+                  <textarea id="register-field-6"
                     value={form.description}
                     onChange={(e) => setForm({ ...form, description: e.target.value })}
                     rows={3}

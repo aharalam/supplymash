@@ -1,0 +1,226 @@
+/*
+  hover.css — all interactive hover, active, and focus states for SupplyMash.
+  Uses CSS :hover so React inline-style onMouse* handlers are not needed.
+  All transitions respect prefers-reduced-motion.
+*/
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0ms !important; animation-duration: 0ms !important; }
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+/* Primary filled button */
+.btn-primary {
+  transition: background-color var(--dur, 180ms) var(--ease, ease),
+              transform 100ms var(--ease, ease);
+}
+@media (hover: hover) {
+  .btn-primary:hover {
+    background: color-mix(in oklab, var(--action) 86%, var(--ink));
+  }
+}
+.btn-primary:active { transform: translateY(1px) scale(0.985); }
+
+/* Secondary outlined button */
+.btn-secondary {
+  transition: background-color var(--dur, 180ms) var(--ease, ease),
+              border-color var(--dur, 180ms) var(--ease, ease),
+              transform 100ms var(--ease, ease);
+}
+@media (hover: hover) {
+  .btn-secondary:hover {
+    background: color-mix(in oklab, var(--bg) 92%, var(--ink));
+    border-color: color-mix(in oklab, var(--ink) 35%, transparent);
+  }
+}
+.btn-secondary:active { transform: translateY(1px) scale(0.985); }
+
+/* Small utility button (run matching, join pool sm) */
+.btn-sm-action {
+  transition: background-color var(--dur, 180ms) var(--ease, ease),
+              transform 100ms var(--ease, ease);
+}
+@media (hover: hover) {
+  .btn-sm-action:hover { background: color-mix(in oklab, var(--action) 86%, var(--ink)); }
+}
+.btn-sm-action:active { transform: translateY(1px) scale(0.985); }
+.btn-sm-action:disabled { opacity: 0.5; pointer-events: none; }
+
+/* Inverse primary (footer CTA on light background) */
+.btn-inv-primary {
+  transition: background-color var(--dur, 180ms) var(--ease, ease),
+              transform 100ms var(--ease, ease);
+}
+@media (hover: hover) {
+  .btn-inv-primary:hover {
+    background: color-mix(in oklab, var(--p-inv-action) 86%, var(--p-inv-bg));
+  }
+}
+.btn-inv-primary:active { transform: translateY(1px) scale(0.985); }
+
+/* ── Nav ──────────────────────────────────────────────────────────────────── */
+.nav-wordmark {
+  transition: opacity var(--dur, 180ms);
+}
+@media (hover: hover) {
+  .nav-wordmark:hover { opacity: 0.75; }
+}
+
+/* Nav register button (same as btn-primary but in nav context) */
+.nav-cta {
+  transition: background-color var(--dur, 180ms) var(--ease, ease),
+              transform 100ms var(--ease, ease);
+}
+@media (hover: hover) {
+  .nav-cta:hover { background: color-mix(in oklab, var(--action) 86%, var(--ink)); }
+}
+.nav-cta:active { transform: translateY(1px) scale(0.985); }
+
+/* ── Cards ────────────────────────────────────────────────────────────────── */
+/* Feature cards, listing cards, pool cards, warehouse cards */
+.card-hover {
+  transition: transform 180ms var(--ease, ease),
+              border-color 180ms var(--ease, ease),
+              box-shadow 180ms var(--ease, ease);
+}
+@media (hover: hover) {
+  .card-hover:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in oklab, var(--ink) 20%, transparent);
+    box-shadow: 0 4px 20px color-mix(in oklab, var(--ink) 8%, transparent),
+                0 1px 4px color-mix(in oklab, var(--ink) 6%, transparent);
+  }
+}
+.card-hover:active { transform: translateY(0); }
+
+/* Step cards (how-it-works, dark inverse ground) */
+.card-hover-inv {
+  transition: transform 180ms var(--ease, ease),
+              border-color 180ms var(--ease, ease);
+}
+@media (hover: hover) {
+  .card-hover-inv:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in oklab, var(--ink) 25%, transparent);
+  }
+}
+.card-hover-inv:active { transform: translateY(0); }
+
+/* ── Match rows (app-frame) ──────────────────────────────────────────────── */
+.match-row {
+  transition: background-color var(--dur, 180ms) var(--ease, ease),
+              border-color var(--dur, 180ms) var(--ease, ease);
+}
+@media (hover: hover) {
+  .match-row:hover {
+    background: color-mix(in oklab, var(--bg) 60%, var(--surface));
+    border-color: color-mix(in oklab, var(--ink) 18%, transparent);
+  }
+}
+
+/* ── Sidebar nav items (app-frame) ───────────────────────────────────────── */
+.sidebar-item {
+  transition: background-color var(--dur, 180ms) var(--ease, ease),
+              color var(--dur, 180ms) var(--ease, ease);
+  cursor: default;
+}
+@media (hover: hover) {
+  .sidebar-item:not(.sidebar-item--active):hover {
+    background: color-mix(in oklab, var(--surface) 60%, var(--bg));
+    color: color-mix(in oklab, var(--ink) 80%, var(--muted));
+  }
+}
+
+/* ── Link text (arrow links in cards) ────────────────────────────────────── */
+.link-arrow {
+  transition: text-decoration-color var(--dur, 180ms) var(--ease, ease),
+              color var(--dur, 180ms) var(--ease, ease),
+              gap var(--dur, 180ms) var(--ease, ease);
+}
+@media (hover: hover) {
+  .link-arrow:hover {
+    text-decoration-color: currentColor;
+    color: var(--ink);
+  }
+}
+
+/* ── Footer links ─────────────────────────────────────────────────────────── */
+.footer-link {
+  transition: color var(--dur, 180ms) var(--ease, ease);
+}
+@media (hover: hover) {
+  .footer-link:hover {
+    color: color-mix(in oklab, var(--p-inv-ink) 90%, transparent);
+  }
+}
+
+/* ── Register feature option rows ────────────────────────────────────────── */
+.feature-option {
+  transition: border-color 150ms var(--ease, ease),
+              background-color 150ms var(--ease, ease);
+  cursor: pointer;
+}
+@media (hover: hover) {
+  .feature-option:not(.feature-option--checked):hover {
+    border-color: color-mix(in oklab, var(--ink) 20%, transparent);
+    background: color-mix(in oklab, var(--ink) 3%, var(--bg));
+  }
+}
+.feature-option--checked {
+  border-color: var(--accent) !important;
+  background: color-mix(in oklab, var(--accent) 7%, var(--bg)) !important;
+}
+
+/* ── Back link (register page) ──────────────────────────────────────────── */
+.back-link {
+  transition: color var(--dur, 180ms) var(--ease, ease),
+              text-decoration-color var(--dur, 180ms) var(--ease, ease);
+}
+@media (hover: hover) {
+  .back-link:hover {
+    color: var(--ink);
+    text-decoration-color: var(--ink);
+  }
+}
+
+/* ── Page header action buttons (post listing, create pool, etc.) ─────────── */
+.page-cta {
+  transition: background-color var(--dur, 180ms) var(--ease, ease),
+              transform 100ms var(--ease, ease);
+}
+@media (hover: hover) {
+  .page-cta:hover { background: color-mix(in oklab, var(--action) 86%, var(--ink)); }
+}
+.page-cta:active { transform: translateY(1px) scale(0.985); }
+
+/* Accept match button */
+.accept-btn {
+  transition: background-color var(--dur, 180ms) var(--ease, ease),
+              transform 100ms var(--ease, ease);
+}
+@media (hover: hover) {
+  .accept-btn:hover { background: color-mix(in oklab, var(--action) 86%, var(--ink)); }
+}
+.accept-btn:active { transform: translateY(1px) scale(0.985); }
+
+/* ── Rent/join small buttons on cards ────────────────────────────────────── */
+.card-action-btn {
+  transition: background-color var(--dur, 180ms) var(--ease, ease),
+              transform 100ms var(--ease, ease);
+}
+@media (hover: hover) {
+  .card-action-btn:hover { background: color-mix(in oklab, var(--action) 86%, var(--ink)); }
+}
+.card-action-btn:active { transform: translateY(1px) scale(0.985); }
+
+/* ── Listing card left border glow on hover ──────────────────────────────── */
+.listing-card {
+  transition: transform 180ms var(--ease, ease),
+              box-shadow 180ms var(--ease, ease);
+}
+@media (hover: hover) {
+  .listing-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 12px color-mix(in oklab, var(--ink) 6%, transparent);
+  }
+}

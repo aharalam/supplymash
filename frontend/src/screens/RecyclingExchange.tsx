@@ -1,3 +1,4 @@
+'use client';
 import { useEffect, useState } from 'react';
 import { listingsApi, matchesApi, businessApi } from '../api';
 
@@ -52,6 +53,7 @@ const materialLabel = (cat: string) =>
   cat.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
 export default function RecyclingExchange() {
+  const [requestError, setRequestError] = useState('');
   const [listings, setListings] = useState<Listing[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [businesses, setBusinesses] = useState<Business[]>([]);
@@ -69,12 +71,14 @@ export default function RecyclingExchange() {
 
   const load = () =>
     Promise.all([listingsApi.list(), matchesApi.list(), businessApi.list()]).then(
-      ([l, m, b]) => { setListings(l); setMatches(m); setBusinesses(b); },
-    );
+      ([l, m, b]) => { setRequestError(''); setListings(l); setMatches(m); setBusinesses(b); },
+    ).catch(() => { setRequestError('Unable to load data. Make sure the backend is running on port 3001, then retry.'); });
 
   useEffect(() => { load(); }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
+    setRequestError('');
+    try {
     e.preventDefault();
     await listingsApi.create({
       ...form,
@@ -83,29 +87,38 @@ export default function RecyclingExchange() {
     });
     setShowForm(false);
     load();
+    } catch {
+      setRequestError('The request could not be completed. Check your connection and try again; your form has been kept.');
+    }
   };
 
   const handleAccept = async (match: Match) => {
+    setRequestError('');
+    try {
     await matchesApi.respond(match.id, 'accepted');
     load();
+    } catch {
+      setRequestError('The request could not be completed. Check your connection and try again; your form has been kept.');
+    }
   };
 
   return (
     <>
+      {requestError && <div role="alert" className="request-error">{requestError} <button type="button" onClick={() => { void load(); }}>Retry connection</button></div>}
       {/* ── PAGE HEADER ──────────────────────────────────────────────────────── */}
       <section
         style={{
-          paddingTop: 'calc(var(--nav) + var(--padt))',
-          paddingBottom: 'var(--padb)',
+          paddingTop: 'calc(var(--nav) + 48px)',
+          paddingBottom: '40px',
           background: 'var(--bg)',
-          minHeight: '40svh',
+          minHeight: 'auto',
         }}
       >
         <div style={{ width: 'min(100% - 2 * var(--gut), var(--container))', margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 'var(--s-5)', flexWrap: 'wrap' }}>
             <div>
               <h1 style={{ fontSize: 'var(--t-h1)', fontWeight: 500, letterSpacing: '-0.03em', lineHeight: 1.04, marginBottom: 'var(--s-4)' }}>
-                Industrial Recycling Exchange
+                Material exchange
               </h1>
               <p style={{ fontSize: 'var(--t-lead)', color: 'var(--muted)', maxWidth: '52ch' }}>
                 Post excess materials or request raw inputs. AI matches compatible Michigan businesses.
@@ -113,6 +126,7 @@ export default function RecyclingExchange() {
             </div>
             <button
               onClick={() => setShowForm(!showForm)}
+              className="page-cta"
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 'var(--s-2)',
                 height: 'var(--btn-h)', padding: '0 var(--s-5)',
@@ -132,7 +146,7 @@ export default function RecyclingExchange() {
               onSubmit={handleSubmit}
               style={{
                 marginTop: 'var(--s-7)',
-                padding: 'var(--s-7)',
+                padding: 'clamp(20px, 4vw, 40px)',
                 borderRadius: 'var(--r-lg)',
                 border: '1px solid var(--line)',
                 background: 'var(--surface)',
@@ -141,55 +155,55 @@ export default function RecyclingExchange() {
               <h2 style={{ fontSize: 'var(--t-h3)', fontWeight: 500, letterSpacing: '-0.02em', marginBottom: 'var(--s-6)' }}>
                 Create a listing
               </h2>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--s-5)', marginBottom: 'var(--s-5)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: 'var(--s-5)', marginBottom: 'var(--s-5)' }}>
                 <div>
-                  <label style={labelStyle}>Business</label>
-                  <select required value={form.businessId} onChange={(e) => setForm({ ...form, businessId: e.target.value })} style={inputStyle}>
+                  <label htmlFor="recyclingexchange-field-1" style={labelStyle}>Business</label>
+                  <select id="recyclingexchange-field-1" required value={form.businessId} onChange={(e) => setForm({ ...form, businessId: e.target.value })} style={inputStyle}>
                     <option value="">Select…</option>
                     {businesses.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label style={labelStyle}>Listing type</label>
-                  <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} style={inputStyle}>
+                  <label htmlFor="recyclingexchange-field-2" style={labelStyle}>Listing type</label>
+                  <select id="recyclingexchange-field-2" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} style={inputStyle}>
                     <option value="offering">Offering — I have excess</option>
                     <option value="requesting">Requesting — I need this</option>
                   </select>
                 </div>
                 <div>
-                  <label style={labelStyle}>Material category</label>
-                  <select value={form.materialCategory} onChange={(e) => setForm({ ...form, materialCategory: e.target.value })} style={inputStyle}>
+                  <label htmlFor="recyclingexchange-field-3" style={labelStyle}>Material category</label>
+                  <select id="recyclingexchange-field-3" value={form.materialCategory} onChange={(e) => setForm({ ...form, materialCategory: e.target.value })} style={inputStyle}>
                     {['wood_lumber', 'metal_scrap', 'plastic', 'cardboard_paper', 'food_byproduct', 'textile', 'other'].map((c) => (
                       <option key={c} value={c}>{materialLabel(c)}</option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label style={labelStyle}>Title</label>
-                  <input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} style={inputStyle} placeholder="e.g. Excess wood chips — 2 tons/week" />
+                  <label htmlFor="recyclingexchange-field-4" style={labelStyle}>Title</label>
+                  <input id="recyclingexchange-field-4" required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} style={inputStyle} placeholder="e.g. Excess wood chips — 2 tons/week" />
                 </div>
                 <div>
-                  <label style={labelStyle}>Quantity</label>
-                  <input type="number" required value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} style={inputStyle} />
+                  <label htmlFor="recyclingexchange-field-5" style={labelStyle}>Quantity</label>
+                  <input id="recyclingexchange-field-5" type="number" required value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} style={inputStyle} />
                 </div>
                 <div>
-                  <label style={labelStyle}>Unit</label>
-                  <input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} style={inputStyle} placeholder="lbs, tons, pallets…" />
+                  <label htmlFor="recyclingexchange-field-6" style={labelStyle}>Unit</label>
+                  <input id="recyclingexchange-field-6" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} style={inputStyle} placeholder="lbs, tons, pallets…" />
                 </div>
                 <div style={{ gridColumn: '1 / -1' }}>
-                  <label style={labelStyle}>Description</label>
-                  <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2}
+                  <label htmlFor="recyclingexchange-field-7" style={labelStyle}>Description</label>
+                  <textarea id="recyclingexchange-field-7" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2}
                     style={{ ...inputStyle, height: 'auto', padding: 'var(--s-3) var(--s-4)', resize: 'vertical' }} />
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 'var(--s-3)' }}>
-                <button type="submit" style={{
+                <button type="submit" className="btn-primary" style={{
                   display: 'inline-flex', alignItems: 'center', height: 'var(--btn-h)', padding: '0 var(--s-5)',
                   borderRadius: 'var(--r-btn)', border: '1px solid transparent',
                   font: '500 var(--t-body)/1 var(--font-text)',
                   background: 'var(--action)', color: 'var(--action-ink)',
                 }}>Post listing</button>
-                <button type="button" onClick={() => setShowForm(false)} style={{
+                <button type="button" onClick={() => setShowForm(false)} className="btn-secondary" style={{
                   display: 'inline-flex', alignItems: 'center', height: 'var(--btn-h)', padding: '0 var(--s-5)',
                   borderRadius: 'var(--r-btn)', border: '1px solid var(--line-strong)',
                   font: '500 var(--t-body)/1 var(--font-text)',
@@ -202,7 +216,7 @@ export default function RecyclingExchange() {
       </section>
 
       {/* ── LISTINGS ──────────────────────────────────────────────────────────── */}
-      <section style={{ padding: 'var(--padt) 0 var(--padb)', background: 'var(--surface)', minHeight: '50svh' }}>
+      <section style={{ padding: '40px 0 64px', background: 'var(--surface)', minHeight: '50svh' }}>
         <div style={{ width: 'min(100% - 2 * var(--gut), var(--container))', margin: '0 auto' }}>
           <div style={{ marginBottom: 'var(--head-gap)' }}>
             <h2 style={{ fontSize: 'var(--t-h2)', fontWeight: 500, letterSpacing: '-0.025em', marginBottom: 'var(--s-3)' }}>Active listings</h2>
@@ -210,7 +224,7 @@ export default function RecyclingExchange() {
           {listings.length === 0 ? (
             <p style={{ color: 'var(--muted)', fontSize: 'var(--t-body)' }}>No active listings yet. Post one above.</p>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: 'var(--card-gap)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 380px), 1fr))', gap: 'var(--card-gap)' }}>
               {listings.map((l) => (
                 <ListingCard key={l.id} listing={l} />
               ))}
@@ -221,7 +235,7 @@ export default function RecyclingExchange() {
 
       {/* ── AI MATCHES ───────────────────────────────────────────────────────── */}
       {matches.length > 0 && (
-        <section style={{ padding: 'var(--padt) 0 var(--padb)', background: 'var(--bg)', minHeight: '50svh' }}>
+        <section style={{ padding: '40px 0 64px', background: 'var(--bg)', minHeight: '50svh' }}>
           <div style={{ width: 'min(100% - 2 * var(--gut), var(--container))', margin: '0 auto' }}>
             <div style={{ marginBottom: 'var(--head-gap)' }}>
               <h2 style={{ fontSize: 'var(--t-h2)', fontWeight: 500, letterSpacing: '-0.025em', marginBottom: 'var(--s-3)' }}>AI-suggested matches</h2>
@@ -233,6 +247,7 @@ export default function RecyclingExchange() {
               {matches.map((m) => (
                 <div
                   key={m.id}
+                  className="card-hover"
                   style={{
                     display: 'flex', flexDirection: 'column', gap: 'var(--s-4)',
                     padding: 'var(--s-6)',
@@ -247,8 +262,8 @@ export default function RecyclingExchange() {
                     </span>
                     <span style={{
                       padding: '3px 10px', borderRadius: 999,
-                      background: 'color-mix(in oklab, #22c55e 15%, transparent)',
-                      color: '#22c55e', fontSize: 'var(--t-label)', fontWeight: 500,
+                      background: 'color-mix(in oklab, #246444 15%, transparent)',
+                      color: '#246444', fontSize: 'var(--t-label)', fontWeight: 500,
                     }}>
                       {m.compatibilityScore}% match
                     </span>
@@ -258,6 +273,7 @@ export default function RecyclingExchange() {
                     {m.status === 'pending' && (
                       <button
                         onClick={() => handleAccept(m)}
+                        className="accept-btn"
                         style={{
                           display: 'inline-flex', alignItems: 'center', height: 'var(--btn-h)', padding: '0 var(--s-5)',
                           borderRadius: 'var(--r-btn)', border: '1px solid transparent',
@@ -272,7 +288,7 @@ export default function RecyclingExchange() {
                       padding: '3px 10px', borderRadius: 999,
                       border: '1px solid var(--line)',
                       fontSize: 'var(--t-label)', fontWeight: 500,
-                      color: m.status === 'accepted' ? '#22c55e' : 'var(--muted)',
+                      color: m.status === 'accepted' ? '#246444' : 'var(--muted)',
                     }}>
                       {m.status}
                     </span>
@@ -290,21 +306,21 @@ export default function RecyclingExchange() {
 function ListingCard({ listing: l }: { listing: Listing }) {
   return (
     <div
+      className="listing-card"
       style={{
         display: 'flex', flexDirection: 'column', gap: 'var(--s-3)',
         padding: 'var(--s-5)',
         borderRadius: 'var(--r-lg)',
         border: '1px solid var(--line)',
-        borderLeft: `3px solid ${l.type === 'offering' ? '#22c55e' : '#3b82f6'}`,
+        borderLeft: `3px solid ${l.type === 'offering' ? '#246444' : '#315e86'}`,
         background: 'var(--card)',
-        transition: 'transform 180ms',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--s-3)' }}>
         <span style={{
           padding: '3px 10px', borderRadius: 999, fontSize: 'var(--t-label)', fontWeight: 500,
-          background: l.type === 'offering' ? 'color-mix(in oklab, #22c55e 15%, transparent)' : 'color-mix(in oklab, #3b82f6 15%, transparent)',
-          color: l.type === 'offering' ? '#22c55e' : '#3b82f6',
+          background: l.type === 'offering' ? 'color-mix(in oklab, #246444 15%, transparent)' : 'color-mix(in oklab, #315e86 15%, transparent)',
+          color: l.type === 'offering' ? '#246444' : '#315e86',
         }}>
           {l.type === 'offering' ? '↑ Offering' : '↓ Requesting'}
         </span>
@@ -317,8 +333,8 @@ function ListingCard({ listing: l }: { listing: Listing }) {
         <span style={{ fontSize: 'var(--t-small)', color: 'var(--muted)' }}>{l.quantity} {l.unit}</span>
         <span style={{
           marginLeft: 'auto', padding: '2px 8px', borderRadius: 999, fontSize: 'var(--t-label)', fontWeight: 500,
-          background: l.status === 'active' ? 'color-mix(in oklab, #22c55e 12%, transparent)' : 'color-mix(in oklab, var(--accent) 12%, transparent)',
-          color: l.status === 'active' ? '#22c55e' : 'var(--accent)',
+          background: l.status === 'active' ? 'color-mix(in oklab, #246444 12%, transparent)' : 'color-mix(in oklab, var(--accent) 12%, transparent)',
+          color: l.status === 'active' ? '#246444' : 'var(--accent)',
         }}>{l.status}</span>
       </div>
     </div>
