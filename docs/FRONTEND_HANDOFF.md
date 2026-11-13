@@ -42,6 +42,8 @@ api.interceptors.request.use((c) => {
 | `GET /api/scrap-offers` (header **required**) | Scrap offer inbox. |
 | `PUT /api/matches/:matchId/respond` `{status:'accepted'\|'declined'}` (header) | Accept or decline. Show buttons **only when `role === 'holder'`**; anyone else gets 403. |
 | `GET /api/metrics` | Metrics strip. |
+| `GET /api/notifications` (header **required**) | Updates feed, `{ unreadCount, notifications }`, newest first. Covers: pool grew, pool closed, card declined, scrap offer made, accepted or declined. |
+| `POST /api/notifications/read` (header) | Mark all of the viewer's updates read. |
 | `POST /api/demo/reset` | Hidden "Reset demo" button. |
 
 Errors always come back as `{ error: string }` with a 4xx status: 400, 403, 404 or 422. Show `error` to the user rather than a generic failure.

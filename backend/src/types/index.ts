@@ -248,6 +248,29 @@ export interface ScrapOffer {
   aiReasoning: string;
   reasoningBy: 'granite' | 'template';
   status: 'pending' | 'accepted' | 'declined';
+  /** Present once accepted: who to contact and where the scrap is picked up. */
+  deal?: ScrapDeal;
+}
+
+export interface ScrapDeal {
+  counterpartyName: string;
+  counterpartyEmail: string;
+  pickupFrom: string; // holder's name and city; the requester collects
+  total: number;      // estQty × suggested price
+}
+
+// ── Updates feed ──────────────────────────────────────────────────────────────
+
+export interface Notification {
+  id: string;
+  businessId: string;
+  kind: 'pool_grew' | 'pool_closed' | 'charge_failed' | 'scrap_offer' | 'scrap_requested' | 'scrap_accepted' | 'scrap_declined';
+  title: string;
+  body: string;
+  createdAt: string;
+  read: boolean;
+  poolId?: string;
+  matchId?: string;
 }
 
 export interface Metrics {

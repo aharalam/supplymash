@@ -1,10 +1,10 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import {
-  apiError, businessApi, demoApi, metricsApi, ordersApi, poolsApi, scrapOffersApi, suppliersApi,
+  apiError, businessApi, demoApi, metricsApi, notificationsApi, ordersApi, poolsApi, scrapOffersApi, suppliersApi,
 } from '../api';
 import type {
-  BusinessSummary, ClosePoolResponse, CreateOrderResponse, Invoice, Metrics, OrderLine, OrderWithPool,
+  BusinessSummary, ClosePoolResponse, CreateOrderResponse, Invoice, Metrics, NotificationFeed, OrderLine, OrderWithPool,
   PoolOperatorView, PoolView, ScrapOffer, Supplier,
 } from '../api/types';
 import { usePersona } from '../persona';
@@ -16,6 +16,11 @@ const usd = (n: number | undefined) => (n === undefined ? '—' : usdFormat.form
 const whole = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
 const shortDate = (iso: string) =>
   new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+const PLACEHOLDER_BY_CATEGORY: Record<string, string> = {
+  lumber: 'e.g. 60 2x4s and 10 sheets of plywood',
+  animal_feed: 'e.g. 10 bags of corn feed and 5 bags of fertilizer',
+};
+
 /** Sub-dollar unit prices need 3 decimals ($0.056/lb, not $0.06/lbs). */
 const perUnit = (n: number) => (n < 1 ? `$${n.toFixed(3)}` : usdFormat.format(n));
 const unitOne = (u: string) => u.replace(/s$/, '');
@@ -147,7 +152,9 @@ function BusinessView({ persona, viewer, version, onChange }: {
   const [offers, setOffers] = useState<ScrapOffer[] | null>(null);
   const [offersError, setOffersError] = useState('');
   const [openPools, setOpenPools] = useState<PoolView[]>([]);
+  const [feed, setFeed] = useState<NotificationFeed | null>(null);
   useEffect(() => {
+    notificationsApi.list().then(setFeed).catch(() => setFeed(null));
     scrapOffersApi.list().then((o) => { setOffers(o); setOffersError(''); }).catch((err) => setOffersError(apiError(err)));
     poolsApi.listForViewer()
       .then((p) => setOpenPools(p.filter((pool) => pool.status === 'open' && !pool.yourOrderId)))
@@ -164,10 +171,44 @@ function BusinessView({ persona, viewer, version, onChange }: {
         <MyOrders version={version} />
       </div>
       <aside className="business-grid__side">
+        {feed && feed.notifications.length > 0 && <Updates feed={feed} onRead={onChange} />}
         {openPools.length > 0 && <OpenPools pools={openPools} />}
         <ScrapInbox offers={offers} error={offersError} onChange={onChange} />
       </aside>
     </div>
+  );
+}
+
+const timeAgo = (iso: string) => {
+  const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  return mins < 1 ? 'just now' : mins < 60 ? `${mins} min ago` : new Date(iso).toLocaleString('en-US', { hour: 'numeric', minute: '2-digit' });
+};
+
+function Updates({ feed, onRead }: { feed: NotificationFeed; onRead: () => void }) {
+  const [busy, setBusy] = useState(false);
+  async function markRead() {
+    setBusy(true);
+    try { await notificationsApi.markAllRead(); onRead(); } finally { setBusy(false); }
+  }
+  return (
+    <section className="updates" aria-labelledby="updates-title">
+      <div className="workspace-section-title">
+        <h2 id="updates-title">Updates</h2>
+        {feed.unreadCount > 0 && <span className="count-label count-label--new">{feed.unreadCount} new</span>}
+      </div>
+      <ul className="update-list">
+        {feed.notifications.slice(0, 6).map((n) => (
+          <li key={n.id} className={`update update--${n.kind}${n.read ? '' : ' update--unread'}`}>
+            <p className="update__title">{n.title}</p>
+            <p className="update__body">{n.body}</p>
+            <p className="update__time">{timeAgo(n.createdAt)}</p>
+          </li>
+        ))}
+      </ul>
+      {feed.unreadCount > 0 && (
+        <button type="button" className="quiet-button" disabled={busy} onClick={() => void markRead()}>Mark all as read</button>
+      )}
+    </section>
   );
 }
 
@@ -234,7 +275,7 @@ function PlaceOrder({ persona, viewer, onPlaced }: {
           <label htmlFor="order-text">What do you need?</label>
           <textarea
             id="order-text" required rows={3} value={text} onChange={(e) => setText(e.target.value)}
-            placeholder={supplier?.catalog[0]?.category === 'lumber' ? 'e.g. 60 2x4s and 10 sheets of plywood' : 'e.g. 2 cases Bounty and some napkins'}
+            placeholder={PLACEHOLDER_BY_CATEGORY[supplier?.catalog[0]?.category ?? ''] ?? 'e.g. 2 cases Bounty and some napkins'}
           />
           {supplier && (
             <p className="field-hint">
@@ -369,8 +410,19 @@ function ScrapOfferCard({ offer, onChange }: { offer: ScrapOffer; onChange: () =
           <button type="button" className="outline-button" disabled={busy} onClick={() => void respond('declined')}>Decline</button>
         </div>
       )}
+      {offer.deal && (
+        <dl className="scrap-deal">
+          <div><dt>{offer.role === 'holder' ? 'Buyer' : 'Seller'}</dt><dd>{offer.deal.counterpartyName}</dd></div>
+          <div><dt>Contact</dt><dd><a href={`mailto:${offer.deal.counterpartyEmail}`}>{offer.deal.counterpartyEmail}</a></dd></div>
+          <div><dt>Pickup</dt><dd>{offer.role === 'holder' ? 'They collect from you' : offer.deal.pickupFrom}</dd></div>
+          <div><dt>Total</dt><dd>{usd(offer.deal.total)}</dd></div>
+        </dl>
+      )}
+      {offer.role === 'requester' && status === 'declined' && (
+        <p className="field-hint">The holder passed on this one. Your request is still open.</p>
+      )}
       {offer.role === 'requester' && status === 'pending' && (
-        <p className="field-hint">Waiting for the holder to accept. The requester picks up the scrap.</p>
+        <p className="field-hint">Waiting for them to accept. You'll get an update here, and you pick it up once they say yes.</p>
       )}
       {error && <p className="inline-error" role="alert">{error}</p>}
     </article>

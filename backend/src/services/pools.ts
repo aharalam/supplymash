@@ -27,6 +27,7 @@ import {
 import { bestUnitPrice, calcOrderCosts, calcProgress, poolCombinedQty, poolSubtotal, round2 } from './pricing';
 import { charge } from './payments';
 import { poEmail } from './writer';
+import { money, notify } from './notify';
 
 // ── internals ─────────────────────────────────────────────────────────────────
 
@@ -203,6 +204,42 @@ export function buildOperatorView(poolId: string): PoolOperatorView | null {
  */
 export { buildPoolView as buildViewForOrder };
 
+// ── member snapshot (for "your pool grew" updates) ─────────────────────────────
+
+export interface MemberSnapshot {
+  freeDelivery: boolean;
+  savings: Map<string, number>; // businessId → estimated savings
+}
+
+export function snapshotPool(pool: Pool): MemberSnapshot {
+  const supplier = getSupplier(pool.supplierId);
+  const orders = db.orders.filter((o) => pool.orderIds.includes(o.id));
+  return {
+    freeDelivery: orders.length > 0 && poolSubtotal(orders, supplier) >= supplier.freeDeliveryMinimum,
+    savings: new Map(orders.map((o) => [o.businessId, calcOrderCosts(o, orders, supplier).savings])),
+  };
+}
+
+/** Tell existing members (never the business that just ordered) how the new order helped them. */
+export function notifyPoolGrew(pool: Pool, before: MemberSnapshot, orderedBy: string): void {
+  const after = snapshotPool(pool);
+  const supplier = getSupplier(pool.supplierId);
+  const unlocked = after.freeDelivery && !before.freeDelivery;
+  for (const [businessId, was] of before.savings) {
+    if (businessId === orderedBy) continue;
+    const now = after.savings.get(businessId) ?? was;
+    if (now <= was + 0.005) continue;
+    notify(
+      businessId,
+      'pool_grew',
+      unlocked ? `Free delivery unlocked on your ${supplier.name} order` : `Your ${supplier.name} pool grew`,
+      `Another local business joined your pool (${after.savings.size} businesses now). ` +
+        `Your estimated savings went from ${money(was)} to ${money(now)}.`,
+      { poolId: pool.id },
+    );
+  }
+}
+
 // ── close (spec §8C–D) ────────────────────────────────────────────────────────
 
 const closing = new Set<string>();
@@ -283,6 +320,30 @@ export async function closePool(poolId: string): Promise<{ purchaseOrder: Purcha
     pool.purchaseOrder = purchaseOrder;
     pool.invoices = [...invoices, ...failedInvoices];
     for (const o of orders) o.status = 'invoiced';
+
+    const others = orders.length - 1;
+    for (const inv of invoices) {
+      notify(
+        inv.businessId,
+        'pool_closed',
+        `Your ${supplier.name} pool closed`,
+        `You were charged ${money(inv.pooledCost)} and saved ${money(inv.savings)}. ` +
+          (others > 0
+            ? `Your order ships in one delivery with ${others} other local business${others === 1 ? '' : 'es'}.`
+            : 'Your order ships as soon as the supplier confirms.'),
+        { poolId: pool.id },
+      );
+    }
+    for (const inv of failedInvoices) {
+      notify(
+        inv.businessId,
+        'charge_failed',
+        'Your card was declined',
+        `Your order was removed from the ${supplier.name} pool and you were not charged. ` +
+          'Update your payment method and order again to join the next pool.',
+        { poolId: pool.id },
+      );
+    }
     return { purchaseOrder, invoices: pool.invoices };
   } finally {
     closing.delete(pool.id);

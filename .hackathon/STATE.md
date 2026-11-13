@@ -20,6 +20,14 @@
   - Product name: SupplyMash or SupplyMesh.
 - Spec deviation (Claude's call): solo cost uses the bulk tier a business's own quantity reaches, so savings are never overstated.
 
+- **Updates feed added (2026-11-13):** every action by one business that affects another now produces an update for the affected business, shown in its **Updates** panel.
+  - Pool grew, with a free-delivery note and the old and new savings.
+  - Pool closed, with the amount charged and saved.
+  - Card declined.
+  - Scrap offer made (to both sides), accepted (with pickup, contact and total) or declined (the request stays open).
+  - Accepted scrap offers show the deal details to both sides.
+  - Covered by `tests/notifications.test.ts`; 85 tests in total. Verified in the browser.
+
 ## Last verified end-to-end demo
 - **Result:** PASSED. The full demo path ran in the browser on the merged frontend and backend.
 - **Base commit:** `b40068d82013a997c41a5c24a586506d23e44dd8`, plus the uncommitted integration fixes listed below.

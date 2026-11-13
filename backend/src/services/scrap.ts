@@ -9,9 +9,11 @@
  */
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '../models/store';
-import { Business, Location, Match, MaterialCategory, Order, OrderLine, ResourceListing, ScrapOffer, Supplier } from '../types';
+import { Business, Location, Match, MaterialCategory, Order, OrderLine, ResourceListing, ScrapDeal, ScrapOffer, Supplier } from '../types';
 import { graniteJSON } from './granite';
 import { days, scrapReason } from './writer';
+import { money, notify } from './notify';
+import { round2 } from './pricing';
 
 export const MAX_DISTANCE_MILES = 60;
 const DEFAULT_PRICE_SHARE = 0.8; // suggested price = 80% of the requester's max (spec §4)
@@ -198,6 +200,24 @@ export async function inferAndOffer(order: Order, lines: OrderLine[], supplier: 
     };
     db.matches.push(match);
     created.push(match);
+
+    const amount = `about ${bp.estLbs} lbs of ${bp.title.toLowerCase()}`;
+    notify(
+      holder.id,
+      'scrap_offer',
+      'Someone nearby wants your leftovers',
+      `Your recent order will likely leave ${amount}. ${anonLabel(requester, hit.miles)} asked for this and would pay ` +
+        `$${price.toFixed(3)}/lb, picking it up. Review it under Scrap offers.`,
+      { matchId: match.id },
+    );
+    notify(
+      request.businessId,
+      'scrap_requested',
+      'We found a match for your request',
+      `${anonLabel(holder, hit.miles)} expects ${amount} within ${days(bp.readyInDays)}. ` +
+        `We've asked them to sell it to you at $${price.toFixed(3)}/lb. You'll get an update here when they answer.`,
+      { matchId: match.id },
+    );
   }
   return created.map((m) => toScrapOffer(m, holder.id)).filter((o): o is ScrapOffer => o !== null);
 }
@@ -234,7 +254,55 @@ export function toScrapOffer(match: Match, viewerId: string): ScrapOffer | null 
     aiReasoning: role === 'holder' ? match.aiReasoning : requesterText,
     reasoningBy: role === 'holder' ? match.reasoningBy ?? 'template' : 'template',
     status: accepted ? 'accepted' : match.status === 'declined' ? 'declined' : 'pending',
+    ...(accepted && counterparty ? { deal: dealFor(offer, counterparty, price) } : {}),
   };
+}
+
+function dealFor(offer: ResourceListing, counterparty: Business, price: number): ScrapDeal {
+  const holder = db.businesses.find((b) => b.id === offer.businessId);
+  return {
+    counterpartyName: counterparty.name,
+    counterpartyEmail: counterparty.contactEmail,
+    pickupFrom: `${holder?.name ?? offer.businessName}, ${holder?.location.city ?? offer.location.city}`,
+    total: round2(offer.quantity * price),
+  };
+}
+
+/** Updates sent when the holder answers an ask-holder offer. */
+export function notifyScrapAnswer(match: Match): void {
+  const offer = db.listings.find((l) => l.id === match.offeringListingId);
+  const request = db.listings.find((l) => l.id === match.requestingListingId);
+  const holder = db.businesses.find((b) => b.id === offer?.businessId);
+  const requester = db.businesses.find((b) => b.id === request?.businessId);
+  if (!offer || !request || !holder || !requester) return;
+  const what = `${offer.quantity} ${offer.unit} of ${offer.title.toLowerCase()}`;
+  if (match.status === 'accepted') {
+    const deal = dealFor(offer, holder, match.suggestedPricePerUnit ?? offer.pricePerUnit);
+    notify(
+      requester.id,
+      'scrap_accepted',
+      `${holder.name} accepted your scrap request`,
+      `About ${what} at $${(match.suggestedPricePerUnit ?? offer.pricePerUnit).toFixed(3)}/lb (≈ ${money(deal.total)}), ` +
+        `ready in about ${days(offer.readyInDays ?? 14)}. Pick it up at ${deal.pickupFrom}. Contact: ${holder.contactEmail}.`,
+      { matchId: match.id },
+    );
+    notify(
+      holder.id,
+      'scrap_accepted',
+      `Deal confirmed with ${requester.name}`,
+      `${requester.name} will pick up about ${what} from you and pay ≈ ${money(deal.total)}. Contact: ${requester.contactEmail}.`,
+      { matchId: match.id },
+    );
+  } else if (match.status === 'declined') {
+    notify(
+      requester.id,
+      'scrap_declined',
+      'A scrap offer fell through',
+      `The nearby business decided not to sell its ${offer.title.toLowerCase()}. ` +
+        'Your request is still open, and we will match it with the next suitable order.',
+      { matchId: match.id },
+    );
+  }
 }
 
 /** True for inferred-scrap records that must stay hidden from legacy endpoints until accepted. */

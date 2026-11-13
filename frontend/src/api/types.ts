@@ -131,6 +131,32 @@ export interface ScrapOffer {
   /** Show the Granite label only when this is 'granite'. */
   reasoningBy: 'granite' | 'template';
   status: 'pending' | 'accepted' | 'declined';
+  /** Present once accepted. */
+  deal?: ScrapDeal;
+}
+
+export interface ScrapDeal {
+  counterpartyName: string;
+  counterpartyEmail: string;
+  pickupFrom: string;
+  total: number;
+}
+
+export interface Notification {
+  id: string;
+  businessId: string;
+  kind: 'pool_grew' | 'pool_closed' | 'charge_failed' | 'scrap_offer' | 'scrap_requested' | 'scrap_accepted' | 'scrap_declined';
+  title: string;
+  body: string;
+  createdAt: string;
+  read: boolean;
+  poolId?: string;
+  matchId?: string;
+}
+
+export interface NotificationFeed {
+  unreadCount: number;
+  notifications: Notification[];
 }
 
 export interface Metrics {

@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { db } from '../models/store';
 import { Order } from '../types';
 import { parseOrder } from '../services/parser';
-import { findOrCreatePool, joinPool, buildPoolView } from '../services/pools';
+import { findOrCreatePool, joinPool, buildPoolView, snapshotPool, notifyPoolGrew } from '../services/pools';
 import { inferAndOffer } from '../services/scrap';
 
 // ── POST /api/orders (spec §8A) ───────────────────────────────────────────────
@@ -51,7 +51,9 @@ export async function createOrder(req: Request, res: Response): Promise<void> {
       createdAt: new Date().toISOString(),
     };
     // joinPool merges into this business's existing order if it has one; use what it returns.
+    const before = snapshotPool(pool);
     const order = joinPool(pool, incoming);
+    notifyPoolGrew(pool, before, businessId);
     const scrapOffers = await inferAndOffer(order, lines, supplier);
 
     res.status(201).json({ order, pool: buildPoolView(pool.id, businessId), scrapOffers, parsedBy });

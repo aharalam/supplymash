@@ -19,6 +19,7 @@ import {
   Supplier,
   Order,
   Pool,
+  Notification,
 } from '../types';
 
 // ── Mutable collections ───────────────────────────────────────────────────────
@@ -33,6 +34,7 @@ export const db = {
   suppliers: [] as Supplier[],
   orders: [] as Order[],
   pools: [] as Pool[],
+  notifications: [] as Notification[],
 };
 
 // ── Stable IDs (fixed strings so demo/reset produces the same IDs) ────────────
@@ -85,6 +87,7 @@ export function reseed(): void {
   db.suppliers.length  = 0;
   db.orders.length     = 0;
   db.pools.length      = 0;
+  db.notifications.length = 0;
 
   const now = new Date().toISOString();
   const deadline = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(); // 3 days out

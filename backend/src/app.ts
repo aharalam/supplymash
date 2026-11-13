@@ -15,6 +15,7 @@ import poolRoutes from './routes/pools';
 import scrapOfferRoutes from './routes/scrapOffers';
 import metricsRoutes from './routes/metrics';
 import demoRoutes from './routes/demo';
+import notificationRoutes from './routes/notifications';
 
 dotenv.config();
 
@@ -40,6 +41,7 @@ app.use('/api/pools', poolRoutes);
 app.use('/api/scrap-offers', scrapOfferRoutes);
 app.use('/api/metrics', metricsRoutes);
 app.use('/api/demo', demoRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

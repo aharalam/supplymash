@@ -114,6 +114,14 @@ describe('closing a pool with Stripe test mode', () => {
     const view = (await api('GET', `/pools/${IDS.detroitPool}`, { as: IDS.midtown })).body;
     assert.equal(view.memberCount, 2);
     assert.equal(view.yourInvoice.status, 'failed');
+
+    // ...and is told why, while the others are told what they paid.
+    const midtown = (await api('GET', '/notifications', { as: IDS.midtown })).body.notifications[0];
+    assert.equal(midtown.kind, 'charge_failed');
+    assert.match(midtown.body, /not charged/);
+    const corktown = (await api('GET', '/notifications', { as: IDS.corktown })).body.notifications[0];
+    assert.equal(corktown.kind, 'pool_closed');
+    assert.match(corktown.body, /one delivery with 1 other local business\./);
   });
 
   it('if Stripe is unreachable, charges are mocked and the demo still completes', async () => {

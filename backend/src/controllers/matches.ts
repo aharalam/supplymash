@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '../models/store';
 import { Match } from '../types';
-import { isHiddenScrapMatch } from '../services/scrap';
+import { isHiddenScrapMatch, notifyScrapAnswer } from '../services/scrap';
 
 export const getMatches = (_req: Request, res: Response): void => {
   // Inferred-scrap offers stay private until the holder accepts (spec §6).
@@ -89,6 +89,7 @@ export const respondToMatch = (req: Request, res: Response): void => {
     } else {
       offer.status = 'expired';
     }
+    notifyScrapAnswer(match);
     res.json(match);
     return;
   }

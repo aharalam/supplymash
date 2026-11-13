@@ -49,9 +49,10 @@ Everything below has been verified on the `/orders` page with real watsonx Grani
 | 1:00 | Point at **Parsed by watsonx.ai Granite**, **Free delivery reached** and the savings row. | "Their order tips the pool over free delivery and bulk pricing. **$144 alone, $99 pooled: $45 saved.** The other two cafés save too." |
 | 1:15 | Switcher → **Lakeshore Furniture Works · Grand Rapids**. Type `60 2x4s and 10 sheets of 3/4 plywood`, then click **Place order**. | "Now a furniture maker buys lumber." |
 | 1:30 | Point at the scrap offer: **Pine offcuts and sawdust, ~99 lbs, $0.056/lb, A farm 11 mi away**, and Granite's explanation. | "Nobody listed any scrap. **The order is the signal.** Granite figures out this order will leave offcuts, and we found a farm nearby that asked for exactly that. The farm stays anonymous until the shop says yes." |
-| 1:50 | Click **Accept and sell**. | "One click, and the farm's name is revealed. The farm picks it up." |
+| 1:50 | Click **Accept and sell**. Then switch to **Kent County Pastures · Rockford** and point at **Updates**. | "One click. And on the farm's side, they're told right away: who's selling, how much, where to pick it up and who to contact. Nobody had to post anything." |
 | 2:00 | Switcher → **SupplyMash operator**. Point at the 3 cafés in the Motor City pool, then click **Close pool**. | "SupplyMash is the buyer of record. When the pool closes, we charge each business first, then send the supplier one order." |
 | 2:15 | Point at the purchase order (**$372.50, delivery free**), the email (**Greeting drafted by watsonx.ai Granite**) and the invoices. Flip to the Stripe tab. | "One shipment instead of three. The supplier gets one email. Granite writes the greeting, and every number comes straight from the price list. Each business got its own charge; here they are in Stripe." |
+| 2:30 | *(Optional, if time allows.)* Switch to **Greek Town Espresso** and point at **Updates**: "Your pool closed. Charged $99.00, saved $45.00." | "Every business hears what happened to its order." |
 | 2:35 | Back to tab 1. Point at the metrics strip. | "**$142.50 saved, 2 deliveries avoided, 99 lbs of waste diverted, $378 kept with Michigan suppliers**, from four clicks." |
 | 2:45 | Nothing to click | "We built this in IBM Bob, and watsonx Granite parses orders, infers scrap and writes to suppliers. Next: warehouse sharing on the same matching engine, and a watsonx Orchestrate assistant so owners can order by chat." |
 
@@ -72,6 +73,12 @@ Everything below has been verified on the `/orders` page with real watsonx Grani
 - **How do you get enough businesses in one area?** Businesses keep their usual suppliers, so nobody has to switch. Launch with one Detroit neighborhood and one regional supplier, then expand.
 - **Is the AI essential?** Yes, in two places. It turns messy text into orders that can actually be combined, and it notices waste nobody bothered to list. Pricing and matching are deliberately plain rules, so the numbers can be audited.
 - **Privacy?** Businesses only see an anonymous count and progress bar. Names are revealed only when the scrap holder accepts.
+- **How does a business know something happened?** Every cross-business event lands in that business's **Updates** feed:
+  - someone joined your pool and your savings rose
+  - your pool closed, with what you paid
+  - your card was declined
+  - a scrap offer was made, accepted or declined
+- **What happens after a scrap deal is accepted?** Both sides get each other's contact details, the pickup location and the total. The buyer collects; SupplyMash doesn't move goods.
 - **Michigan impact?** Small businesses compete with national chains on price, money stays with Michigan suppliers, and scrap stays in Michigan supply chains instead of landfills.
 - **Is it live?** It runs locally against real IBM watsonx and Stripe test mode. Hosting on IBM Code Engine is the next step.
 

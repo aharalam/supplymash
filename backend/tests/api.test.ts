@@ -346,7 +346,7 @@ describe('privacy sweep: no business ever sees another business before acceptanc
     it(`viewer ${viewer}`, async () => {
       const own = (await api('GET', '/businesses')).body.find((b: { id: string }) => b.id === viewer).name;
       const others = allNames.filter((n) => n !== own);
-      for (const path of ['/pools', '/orders', '/scrap-offers']) {
+      for (const path of ['/pools', '/orders', '/scrap-offers', '/notifications']) {
         const res = await api('GET', path, { as: viewer });
         assert.equal(res.status, 200);
         assertNoNames(res, others, `${viewer} ${path}`);

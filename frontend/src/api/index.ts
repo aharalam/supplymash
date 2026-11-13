@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { getPersona } from '../persona';
 import type {
-  BusinessSummary, ClosePoolResponse, CreateOrderResponse, Metrics, OrderWithPool,
+  BusinessSummary, ClosePoolResponse, CreateOrderResponse, Metrics, NotificationFeed, OrderWithPool,
   PoolOperatorView, PoolView, ScrapOffer, Supplier,
 } from './types';
 
@@ -87,6 +87,12 @@ export const scrapOffersApi = {
 
 export const metricsApi = {
   get: (): Promise<Metrics> => api.get('/metrics').then((r) => r.data),
+};
+
+export const notificationsApi = {
+  /** Requires a persona (400 otherwise). Newest first. */
+  list: (): Promise<NotificationFeed> => api.get('/notifications').then((r) => r.data),
+  markAllRead: (): Promise<{ ok: true }> => api.post('/notifications/read').then((r) => r.data),
 };
 
 export const demoApi = {
