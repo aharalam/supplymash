@@ -16,6 +16,9 @@ const usd = (n: number | undefined) => (n === undefined ? '—' : usdFormat.form
 const whole = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
 const shortDate = (iso: string) =>
   new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+/** Sub-dollar unit prices need 3 decimals ($0.056/lb, not $0.06/lbs). */
+const perUnit = (n: number) => (n < 1 ? `$${n.toFixed(3)}` : usdFormat.format(n));
+const unitOne = (u: string) => u.replace(/s$/, '');
 const lineText = (l: OrderLine) => `${l.qty} ${l.unit}${l.qty === 1 ? '' : 's'} · ${l.name}`;
 
 const INVOICE_STATUS: Record<Invoice['status'], { label: string; tone: string }> = {
@@ -141,17 +144,48 @@ function BusinessView({ persona, viewer, version, onChange }: {
   persona: string; viewer?: BusinessSummary; version: number; onChange: () => void;
 }) {
   const [result, setResult] = useState<CreateOrderResponse | null>(null);
+  const [offers, setOffers] = useState<ScrapOffer[] | null>(null);
+  const [offersError, setOffersError] = useState('');
+  const [openPools, setOpenPools] = useState<PoolView[]>([]);
+  useEffect(() => {
+    scrapOffersApi.list().then((o) => { setOffers(o); setOffersError(''); }).catch((err) => setOffersError(apiError(err)));
+    poolsApi.listForViewer()
+      .then((p) => setOpenPools(p.filter((pool) => pool.status === 'open' && !pool.yourOrderId)))
+      .catch(() => setOpenPools([]));
+  }, [version]);
+  // The order card shows each offer's latest status (e.g. after it was answered in the inbox).
+  const latest = (o: ScrapOffer) => offers?.find((x) => x.matchId === o.matchId) ?? o;
+
   return (
     <div className="business-grid">
       <div className="business-grid__main">
         <PlaceOrder persona={persona} viewer={viewer} onPlaced={(r) => { setResult(r); onChange(); }} />
-        {result && <OrderResult result={result} onChange={onChange} />}
+        {result && <OrderResult result={{ ...result, scrapOffers: result.scrapOffers.map(latest) }} onChange={onChange} />}
         <MyOrders version={version} />
       </div>
       <aside className="business-grid__side">
-        <ScrapInbox version={version} onChange={onChange} />
+        {openPools.length > 0 && <OpenPools pools={openPools} />}
+        <ScrapInbox offers={offers} error={offersError} onChange={onChange} />
       </aside>
     </div>
+  );
+}
+
+function OpenPools({ pools }: { pools: PoolView[] }) {
+  return (
+    <section className="open-pools" aria-labelledby="open-pools-title">
+      <div className="workspace-section-title"><h2 id="open-pools-title">Open pools near you</h2></div>
+      <p className="field-hint">
+        Nearby businesses are already ordering from your usual suppliers. Order from one to join. Who they are and what they buy stays private.
+      </p>
+      {pools.map((p) => (
+        <article key={p.id} className="open-pool">
+          <h3>{p.supplierName}</h3>
+          <PoolProgress pool={p} />
+          <p className="field-hint">Closes {shortDate(p.deadline)}</p>
+        </article>
+      ))}
+    </section>
   );
 }
 
@@ -283,12 +317,7 @@ function MyOrders({ version }: { version: number }) {
 
 // ── Scrap offers ──────────────────────────────────────────────────────────────
 
-function ScrapInbox({ version, onChange }: { version: number; onChange: () => void }) {
-  const [offers, setOffers] = useState<ScrapOffer[] | null>(null);
-  const [error, setError] = useState('');
-  useEffect(() => {
-    scrapOffersApi.list().then((o) => { setOffers(o); setError(''); }).catch((err) => setError(apiError(err)));
-  }, [version]);
+function ScrapInbox({ offers, error, onChange }: { offers: ScrapOffer[] | null; error: string; onChange: () => void }) {
 
   const pending = offers?.filter((o) => o.role === 'holder' && o.status === 'pending').length ?? 0;
   return (
@@ -328,11 +357,11 @@ function ScrapOfferCard({ offer, onChange }: { offer: ScrapOffer; onChange: () =
       <p className="scrap-offer__facts">
         {offer.role === 'holder' ? 'You hold' : 'You requested'} ~{whole.format(offer.estQty)} {offer.unit} · ready in {offer.readyInDays} day{offer.readyInDays === 1 ? '' : 's'}
         <br />
-        {usd(offer.suggestedPricePerUnit)}/{offer.unit} suggested (≈ {usd(value)}) · {offer.counterpartyLabel}
+        {perUnit(offer.suggestedPricePerUnit)}/{unitOne(offer.unit)} suggested (≈ {usd(value)}) · {offer.counterpartyLabel}
       </p>
       <blockquote className="ai-reasoning">
         <p>{offer.aiReasoning}</p>
-        <GraniteTag />
+        {offer.reasoningBy === 'granite' && <GraniteTag />}
       </blockquote>
       {offer.role === 'holder' && status === 'pending' && (
         <div className="scrap-offer__actions">
@@ -447,7 +476,7 @@ function OperatorPool({ pool, nameFor, onChange }: {
             </table>
           </div>
           <div className="email-preview">
-            <div className="email-preview__head"><span>Email to supplier</span><GraniteTag>Drafted by watsonx.ai Granite</GraniteTag></div>
+            <div className="email-preview__head"><span>Email to supplier</span>{po.emailBy === 'granite' && <GraniteTag>Greeting drafted by watsonx.ai Granite</GraniteTag>}</div>
             <pre>{po.emailText}</pre>
           </div>
         </div>

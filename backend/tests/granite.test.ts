@@ -171,6 +171,14 @@ describe('orders, scrap and PO email with Granite on', () => {
     assert.equal(offer.reasoningBy, 'template');
   });
 
+  it('Granite calling the purchased product itself "scrap" is ignored', async () => {
+    // Seen live from granite-4-h-small: the whole plywood order offered as scrap.
+    fakeWatsonx({ parse: '[]', scrap: '[{"materialCategory":"wood_lumber","title":"Plywood Sheet 4x8","estLbs":600,"readyInDays":7}]' });
+    const res = await furnitureOrder();
+    assert.equal(res.body.scrapOffers[0].material, 'Wood offcuts and sawdust');
+    assert.equal(res.body.scrapOffers[0].estQty, 114);
+  });
+
   it('impossible Granite estimates are ignored', async () => {
     fakeWatsonx({ parse: '[]', scrap: '[{"materialCategory":"wood_lumber","title":"Offcuts","estLbs":99999,"readyInDays":3}]' });
     const res = await furnitureOrder();

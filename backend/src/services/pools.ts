@@ -118,7 +118,9 @@ export function buildPoolView(poolId: string, viewerBusinessId: string): PoolVie
 
   const supplier = getSupplier(pool.supplierId);
   const allOrders = db.orders.filter((o) => pool.orderIds.includes(o.id));
-  const { progressPct, nextMilestone } = calcProgress(allOrders, supplier);
+  const progress = calcProgress(allOrders, supplier);
+  const progressPct = progress.progressPct;
+  const nextMilestone = pool.status === 'open' ? progress.nextMilestone : null; // nothing left to unlock once closed
 
   const viewerOrder = allOrders.find((o) => o.businessId === viewerBusinessId);
   let viewerFields: Partial<PoolView> = {};
@@ -163,7 +165,9 @@ export function buildOperatorView(poolId: string): PoolOperatorView | null {
 
   const supplier = getSupplier(pool.supplierId);
   const allOrders = db.orders.filter((o) => pool.orderIds.includes(o.id));
-  const { progressPct, nextMilestone } = calcProgress(allOrders, supplier, { includeTierHints: true });
+  const progress = calcProgress(allOrders, supplier, { includeTierHints: true });
+  const progressPct = progress.progressPct;
+  const nextMilestone = pool.status === 'open' ? progress.nextMilestone : null;
   const pSub = poolSubtotal(allOrders, supplier);
 
   const business = (id: string) => db.businesses.find((b) => b.id === id);

@@ -11,7 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { db } from '../models/store';
 import { Business, Location, Match, MaterialCategory, Order, OrderLine, ResourceListing, ScrapOffer, Supplier } from '../types';
 import { graniteJSON } from './granite';
-import { scrapReason } from './writer';
+import { days, scrapReason } from './writer';
 
 export const MAX_DISTANCE_MILES = 60;
 const DEFAULT_PRICE_SHARE = 0.8; // suggested price = 80% of the requester's max (spec §4)
@@ -52,8 +52,16 @@ export function ruleByproducts(lines: OrderLine[], supplier: Supplier): Byproduc
     .filter((b) => b.estLbs > 0);
 }
 
-/** Validate Granite's byproduct JSON. Exported for tests. */
-export function validateGraniteByproducts(raw: unknown, totalLbs: number): Byproduct[] {
+/** Scrap is a small share of what was bought; anything outside this band is a bad guess. */
+const MIN_SCRAP_SHARE = 0.02;
+const MAX_SCRAP_SHARE = 0.25;
+
+/**
+ * Validate Granite's byproduct JSON. Exported for tests.
+ * Rejects estimates outside 2–25% of the order's weight and titles that are just
+ * a purchased product (e.g. "Plywood Sheet 4x8"): the rule-based offer is used instead.
+ */
+export function validateGraniteByproducts(raw: unknown, totalLbs: number, productNames: string[] = []): Byproduct[] {
   if (!Array.isArray(raw)) return [];
   const out: Byproduct[] = [];
   for (const e of raw) {
@@ -61,7 +69,9 @@ export function validateGraniteByproducts(raw: unknown, totalLbs: number): Bypro
     const { materialCategory, title, estLbs, readyInDays } = e as Record<string, unknown>;
     if (!MATERIAL_CATEGORIES.includes(materialCategory as MaterialCategory)) continue;
     if (typeof title !== 'string' || !title.trim() || title.length > 80) continue;
-    if (typeof estLbs !== 'number' || !(estLbs > 0) || estLbs > totalLbs) continue;
+    if (typeof estLbs !== 'number' || estLbs < totalLbs * MIN_SCRAP_SHARE || estLbs > totalLbs * MAX_SCRAP_SHARE) continue;
+    const t = title.trim().toLowerCase();
+    if (productNames.some((n) => n.toLowerCase().includes(t) || t.includes(n.toLowerCase()))) continue;
     const days = typeof readyInDays === 'number' && readyInDays >= 0 && readyInDays <= 90 ? Math.round(readyInDays) : 14;
     out.push({ materialCategory: materialCategory as MaterialCategory, title: title.trim(), estLbs: Math.round(estLbs), readyInDays: days });
   }
@@ -73,13 +83,15 @@ async function inferByproducts(lines: OrderLine[], supplier: Supplier): Promise<
   const totalLbs = lines.reduce((sum, l) => sum + lineWeightLbs(l, supplier), 0);
   const raw = await graniteJSON(
     'You estimate the reusable scrap or byproducts a small business will produce from what it buys. ' +
+      'Scrap means leftovers such as offcuts, sawdust, trimmings or packaging, never the purchased products themselves. ' +
+      'It is usually 5-15% of the purchased weight. ' +
       'Reply with ONLY a JSON array: [{"materialCategory": one of ' + JSON.stringify(MATERIAL_CATEGORIES) +
-      ', "title": short name, "estLbs": number, "readyInDays": number}]. Be conservative. Reply [] if none.',
+      ', "title": short name like "Pine offcuts and sawdust", "estLbs": number, "readyInDays": number}]. Reply [] if none.',
     `Order from ${supplier.name}:\n` +
       lines.map((l) => `${l.qty} ${l.unit} of ${l.name} (~${lineWeightLbs(l, supplier)} lbs total)`).join('\n'),
     { maxTokens: 250 },
   );
-  const fromGranite = validateGraniteByproducts(raw, totalLbs);
+  const fromGranite = validateGraniteByproducts(raw, totalLbs, lines.map((l) => l.name));
   // Granite refines a category the rules found; rules keep the category if Granite missed it.
   const merged = new Map<MaterialCategory, Byproduct>();
   for (const b of rules) merged.set(b.materialCategory, b);
@@ -202,6 +214,13 @@ export function toScrapOffer(match: Match, viewerId: string): ScrapOffer | null 
   const counterparty = db.businesses.find((b) => b.id === counterpartyId);
   const miles = distanceMiles(offer.location, request.location);
   const accepted = match.status === 'accepted' || match.status === 'completed';
+  const price = match.suggestedPricePerUnit ?? offer.pricePerUnit;
+  // The stored reasoning is written for the holder and describes their order.
+  // The requester gets its own text so the holder's purchases are never revealed.
+  const requesterText =
+    `${accepted ? counterparty?.name ?? 'A nearby business' : anonLabel(counterparty, miles)} expects about ` +
+    `${offer.quantity} ${offer.unit} of ${offer.title.toLowerCase()} within ${days(offer.readyInDays ?? 14)}, ` +
+    `matching your request ("${request.title}"). Suggested price: $${price.toFixed(3)}/lb; you pick it up.`;
   return {
     matchId: match.id,
     role,
@@ -209,11 +228,11 @@ export function toScrapOffer(match: Match, viewerId: string): ScrapOffer | null 
     estQty: offer.quantity,
     unit: offer.unit,
     readyInDays: offer.readyInDays ?? 14,
-    suggestedPricePerUnit: match.suggestedPricePerUnit ?? offer.pricePerUnit,
+    suggestedPricePerUnit: price,
     counterpartyLabel: accepted ? counterparty?.name ?? 'Unknown business' : anonLabel(counterparty, miles),
     distanceMiles: Math.round(miles),
-    aiReasoning: match.aiReasoning,
-    reasoningBy: match.reasoningBy ?? 'template',
+    aiReasoning: role === 'holder' ? match.aiReasoning : requesterText,
+    reasoningBy: role === 'holder' ? match.reasoningBy ?? 'template' : 'template',
     status: accepted ? 'accepted' : match.status === 'declined' ? 'declined' : 'pending',
   };
 }

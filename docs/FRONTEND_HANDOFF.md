@@ -86,3 +86,9 @@ Errors always come back as `{ error: string }` with a 4xx status: 400, 403, 404 
 | Metrics | $142.50 saved, 2 deliveries avoided, 114 lbs diverted, $378.88 kept in Michigan |
 
 `parsedBy` and `reasoningBy` say `fallback` and `template` until watsonx keys are set in `backend/.env`. With keys, they say `granite`.
+
+**With Granite on** (verified live with `ibm/granite-4-h-small`), Granite refines the scrap estimate:
+- The lumber order becomes "Pine offcuts and sawdust", 99 lbs, ready in 1 day.
+- Metrics then show 99 lbs diverted and $378.04 kept in Michigan.
+- The output is stable run to run (temperature 0).
+- The pricing numbers above don't change.

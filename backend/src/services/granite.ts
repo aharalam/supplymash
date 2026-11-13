@@ -11,7 +11,7 @@
 
 const IAM_URL = 'https://iam.cloud.ibm.com/identity/token';
 const API_VERSION = '2024-10-08';
-const DEFAULT_MODEL = 'ibm/granite-3-3-8b-instruct';
+const DEFAULT_MODEL = 'ibm/granite-4-h-small'; // the Granite chat model offered in Dallas (us-south)
 export const GRANITE_TIMEOUT_MS = 8000;
 
 let cachedToken: { value: string; expiresAt: number } | null = null;

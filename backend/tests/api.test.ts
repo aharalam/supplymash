@@ -117,6 +117,9 @@ describe('the 3-minute demo path, end to end', () => {
     assert.equal(res.body[0].role, 'requester');
     assert.match(res.body[0].counterpartyLabel, /^A manufacturer \d+ mi away$/);
     assertNoNames(res, ['Lakeshore'], 'requester offer');
+    // The holder's purchases must not leak through the explanation text.
+    assertNoNames(res, ['2x4', 'Plywood', 'Your order'], 'requester reasoning');
+    assert.match(res.body[0].aiReasoning, /^A manufacturer \d+ mi away expects about 114 lbs/);
   });
 
   it('6. pending scrap stays out of the legacy listings, matches and matcher', async () => {
@@ -147,6 +150,7 @@ describe('the 3-minute demo path, end to end', () => {
     assert.equal(holder.counterpartyLabel, 'Kent County Pastures');
     const requester = (await api('GET', '/scrap-offers', { as: IDS.kentFarm })).body[0];
     assert.equal(requester.counterpartyLabel, 'Lakeshore Furniture Works');
+    assert.ok(!/2x4|Plywood/.test(requester.aiReasoning), 'accepting must still not reveal the holder order');
     assert.ok((await api('GET', '/matches')).body.some((m: { id: string }) => m.id === offerId));
     const again = await api('PUT', `/matches/${offerId}/respond`, { body: { status: 'declined' }, as: IDS.furniture });
     assert.equal(again.status, 409);
@@ -184,6 +188,8 @@ describe('the 3-minute demo path, end to end', () => {
     assert.equal((await api('POST', `/pools/${IDS.detroitPool}/close`)).status, 409);
     const view = (await api('GET', `/pools/${IDS.detroitPool}`, { as: IDS.greektown })).body;
     assert.equal(view.status, 'closed');
+    assert.equal(view.nextMilestone, null);
+    assert.equal((await api('GET', `/pools/${IDS.detroitPool}`)).body.nextMilestone, null);
     assert.equal(view.yourInvoice.businessId, IDS.greektown);
     assert.equal(view.yourInvoice.pooledCost, 99);
     const orders = (await api('GET', '/orders', { as: IDS.greektown })).body;
@@ -344,6 +350,9 @@ describe('privacy sweep: no business ever sees another business before acceptanc
         const res = await api('GET', path, { as: viewer });
         assert.equal(res.status, 200);
         assertNoNames(res, others, `${viewer} ${path}`);
+        // Only the furniture maker may see lumber items; the furniture maker and farm never see café items.
+        if (viewer !== IDS.furniture) assertNoNames(res, ['2x4', 'Plywood'], `${viewer} ${path}`);
+        if (viewer === IDS.furniture || viewer === IDS.kentFarm) assertNoNames(res, ['Napkin', 'Towel', 'Cups', 'Cleaner'], `${viewer} ${path}`);
       }
     });
   }

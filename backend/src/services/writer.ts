@@ -8,6 +8,8 @@ import { graniteChat } from './granite';
 
 export type TextSource = 'granite' | 'template';
 
+export const days = (n: number) => `${n} day${n === 1 ? '' : 's'}`;
+
 export interface ScrapReasonFacts {
   orderSummary: string;       // e.g. "60 × 2x4 Stud 8 ft, 10 × 3/4 in Plywood Sheet 4x8"
   material: string;           // e.g. "Wood offcuts and sawdust"
@@ -21,7 +23,7 @@ export interface ScrapReasonFacts {
 export function templateScrapReason(f: ScrapReasonFacts): string {
   return (
     `Your order (${f.orderSummary}) will likely leave about ${f.estLbs} lbs of ${f.material.toLowerCase()} ` +
-    `within ${f.readyInDays} days. ${f.counterpartyLabel} is looking for exactly this ("${f.requestTitle}"). ` +
+    `within ${days(f.readyInDays)}. ${f.counterpartyLabel} is looking for exactly this ("${f.requestTitle}"). ` +
     `Selling it at $${f.pricePerLb.toFixed(3)}/lb instead of paying to dispose of it keeps the material in Michigan's supply chain.`
   );
 }
@@ -31,7 +33,7 @@ export async function scrapReason(f: ScrapReasonFacts): Promise<{ text: string; 
     'You write one short, friendly explanation (2 sentences, under 60 words) for a small business owner. ' +
       'Plain text only. Never invent names, numbers or facts beyond those given.',
     `Explain why this business should sell its leftover material.\n` +
-      `Their order: ${f.orderSummary}\nLikely leftover: about ${f.estLbs} lbs of ${f.material} within ${f.readyInDays} days\n` +
+      `Their order: ${f.orderSummary}\nLikely leftover: about ${f.estLbs} lbs of ${f.material} within ${days(f.readyInDays)}\n` +
       `Interested buyer: ${f.counterpartyLabel}, whose request says "${f.requestTitle}"\n` +
       `Suggested price: $${f.pricePerLb.toFixed(3)} per lb (buyer picks it up)`,
     { maxTokens: 120 },
