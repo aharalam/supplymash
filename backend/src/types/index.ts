@@ -49,7 +49,7 @@ export interface ResourceListing {
 }
 
 export type ListingType = 'offering' | 'requesting';
-export type ListingStatus = 'active' | 'matched' | 'fulfilled' | 'expired';
+export type ListingStatus = 'active' | 'matched' | 'fulfilled' | 'expired' | 'proposed';
 
 export type MaterialCategory =
   | 'wood_lumber'
@@ -127,3 +127,122 @@ export interface Match {
 }
 
 export type MatchStatus = 'pending' | 'accepted' | 'declined' | 'completed';
+
+// ── §6 Order-first additions ──────────────────────────────────────────────────
+
+export interface Supplier {
+  id: string;
+  name: string;
+  location: Location;
+  michiganBased: boolean;
+  deliveryFee: number;
+  freeDeliveryMinimum: number;
+  catalog: CatalogItem[];
+}
+
+export interface CatalogItem {
+  sku: string;
+  name: string;
+  aliases: string[];
+  category: string;
+  unit: string;
+  unitPrice: number;
+  bulkTiers: { minQty: number; unitPrice: number }[];
+  weightLbsPerUnit?: number;
+}
+
+export interface Order {
+  id: string;
+  businessId: string;
+  supplierId: string;
+  rawText: string;
+  lines: OrderLine[];
+  poolId: string;
+  parsedBy: 'granite' | 'fallback';
+  status: 'pooled' | 'invoiced';
+  createdAt: string;
+}
+
+export interface OrderLine {
+  sku: string;
+  name: string;
+  qty: number;
+  unit: string;
+  soloUnitPrice: number;
+}
+
+export interface Pool {
+  id: string;
+  supplierId: string;
+  orderIds: string[];
+  deadline: string;
+  status: 'open' | 'closed';
+  purchaseOrder?: PurchaseOrder;
+  invoices?: Invoice[];
+}
+
+export interface PurchaseOrder {
+  supplierId: string;
+  lines: { sku: string; name: string; qty: number; unitPrice: number }[];
+  subtotal: number;
+  deliveryFee: number;
+  total: number;
+  emailText: string;
+}
+
+export interface Invoice {
+  businessId: string;
+  orderId: string;
+  soloCost: number;
+  pooledCost: number;
+  savings: number;
+  stripePaymentIntentId?: string;
+  status: 'succeeded' | 'mock_succeeded' | 'failed';
+}
+
+// ── §9 response shapes ────────────────────────────────────────────────────────
+
+export interface PoolView {
+  id: string;
+  supplierName: string;
+  deadline: string;
+  status: 'open' | 'closed';
+  memberCount: number;
+  progressPct: number;
+  nextMilestone: { label: string; amountNeeded: number } | null;
+  yourOrderId?: string;
+  yourSoloCost?: number;
+  yourPooledCost?: number;
+  yourSavings?: number;
+  yourInvoice?: Invoice;
+}
+
+export interface PoolOperatorView extends Omit<PoolView, 'yourOrderId' | 'yourSoloCost' | 'yourPooledCost' | 'yourSavings' | 'yourInvoice'> {
+  orders: { businessName: string; lines: OrderLine[]; soloCost: number; pooledCost: number }[];
+  subtotal: number;
+  purchaseOrder?: PurchaseOrder;
+  invoices?: Invoice[];
+}
+
+export interface ScrapOffer {
+  matchId: string;
+  role: 'holder' | 'requester';
+  material: string;
+  estQty: number;
+  unit: string;
+  readyInDays: number;
+  suggestedPricePerUnit: number;
+  counterpartyLabel: string;
+  distanceMiles: number;
+  aiReasoning: string;
+  status: 'pending' | 'accepted' | 'declined';
+}
+
+export interface Metrics {
+  dollarsSaved: number;
+  dollarsSavedClosed: number;
+  dollarsSavedProjected: number;
+  deliveriesAvoided: number;
+  lbsDiverted: number;
+  dollarsKeptInMichigan: number;
+}
