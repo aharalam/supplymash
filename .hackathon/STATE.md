@@ -28,6 +28,12 @@
   - Accepted scrap offers show the deal details to both sides.
   - Covered by `tests/notifications.test.ts`; 85 tests in total. Verified in the browser.
 
+- **Demo guide walked end to end (2026-11-13), steps 2–5 and 7, in production mode** (`npm start` on both). Every line of the script matched. Fixes from the walk:
+  - The Exchange page had no way to find matches after a reset. It now has a **Find matches** button and an empty state that points to Orders.
+  - Accepting a match now closes the other pending matches that share its surplus or request: no double-selling. A holder whose pending offer closed this way gets a `scrap_filled` update.
+  - With watsonx unreachable, the old code waited out every Granite timeout: orders took 16–24 s. Now there's a 5 s timeout and a 60 s skip after a failure, so the first order takes about 5 s and the rest are instant.
+  - 88 tests pass.
+
 ## Last verified end-to-end demo
 - **Result:** PASSED. The full demo path ran in the browser on the merged frontend and backend.
 - **Base commit:** `b40068d82013a997c41a5c24a586506d23e44dd8`, plus the uncommitted integration fixes listed below.

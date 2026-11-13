@@ -323,6 +323,37 @@ describe('legacy endpoints still work', () => {
     assert.equal(res.status, 200);
   });
 
+  it('accepting a legacy match closes the other matches for the same surplus', async () => {
+    await api('POST', '/demo/reset');
+    const run = (await api('POST', '/matches/run')).body;
+    const sameChips = run.matches.filter((m: { offeringBusiness: string }) => m.offeringBusiness === 'Great Lakes Lumber Co.');
+    assert.ok(sameChips.length >= 2, 'seed offers the same wood chips to several farms');
+    const [first, second] = sameChips;
+    assert.equal((await api('PUT', `/matches/${first.id}/respond`, { body: { status: 'accepted' } })).status, 200);
+    const all = (await api('GET', '/matches')).body;
+    assert.equal(all.find((m: { id: string }) => m.id === second.id).status, 'declined');
+    const again = await api('PUT', `/matches/${second.id}/respond`, { body: { status: 'accepted' } });
+    assert.equal(again.status, 409);
+  });
+
+  it('a request filled elsewhere closes the pending scrap offer and tells its holder', async () => {
+    await api('POST', '/demo/reset');
+    const offer = (await order(IDS.furniture, IDS.grLumber, FURNITURE_ORDER)).body.scrapOffers[0];
+    // Great Lakes Lumber's chips go to the same farm request first.
+    const run = (await api('POST', '/matches/run')).body;
+    const toKent = run.matches.find((m: { requestingBusiness: string }) => m.requestingBusiness === 'Kent County Pastures');
+    assert.equal((await api('PUT', `/matches/${toKent.id}/respond`, { body: { status: 'accepted' } })).status, 200);
+
+    const [mine] = (await api('GET', '/scrap-offers', { as: IDS.furniture })).body;
+    assert.equal(mine.matchId, offer.matchId);
+    assert.equal(mine.status, 'declined');
+    const late = await api('PUT', `/matches/${offer.matchId}/respond`, { body: { status: 'accepted' }, as: IDS.furniture });
+    assert.equal(late.status, 409);
+    const update = (await api('GET', '/notifications', { as: IDS.furniture })).body.notifications[0];
+    assert.equal(update.kind, 'scrap_filled');
+    assert.ok(!update.body.includes('Kent'), 'still anonymous');
+  });
+
   it('warehouses are seeded and old order pools still answer', async () => {
     const wh = await api('GET', '/warehouses');
     assert.equal(wh.body.length, 2);

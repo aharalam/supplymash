@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { listingsApi, matchesApi, businessApi } from '../api';
+import Link from 'next/link';
+import { apiError, listingsApi, matchesApi, businessApi } from '../api';
 
 type Listing = {
   id: string;
@@ -95,10 +96,25 @@ export default function RecyclingExchange() {
   const handleAccept = async (match: Match) => {
     setRequestError('');
     try {
-    await matchesApi.respond(match.id, 'accepted');
-    load();
-    } catch {
-      setRequestError('The request could not be completed. Check your connection and try again; your form has been kept.');
+      await matchesApi.respond(match.id, 'accepted');
+      load();
+    } catch (err) {
+      setRequestError(apiError(err, 'The match could not be accepted. Try again.'));
+    }
+  };
+
+  const [finding, setFinding] = useState(false);
+  const [findResult, setFindResult] = useState('');
+  const findMatches = async () => {
+    setFinding(true); setFindResult(''); setRequestError('');
+    try {
+      const r = await matchesApi.run();
+      setFindResult(r.matched > 0 ? `${r.matched} new match${r.matched === 1 ? '' : 'es'} found.` : 'No new matches right now.');
+      load();
+    } catch (err) {
+      setRequestError(apiError(err, 'Matching could not finish. Try again.'));
+    } finally {
+      setFinding(false);
     }
   };
 
@@ -234,15 +250,41 @@ export default function RecyclingExchange() {
       </section>
 
       {/* ── AI MATCHES ───────────────────────────────────────────────────────── */}
-      {matches.length > 0 && (
-        <section style={{ padding: '40px 0 64px', background: 'var(--bg)', minHeight: '50svh' }}>
+      {(
+        <section style={{ padding: '40px 0 64px', background: 'var(--bg)', minHeight: matches.length ? '50svh' : undefined }}>
           <div style={{ width: 'min(100% - 2 * var(--gut), var(--container))', margin: '0 auto' }}>
-            <div style={{ marginBottom: 'var(--head-gap)' }}>
-              <h2 style={{ fontSize: 'var(--t-h2)', fontWeight: 500, letterSpacing: '-0.025em', marginBottom: 'var(--s-3)' }}>AI-suggested matches</h2>
-              <p style={{ fontSize: 'var(--t-lead)', color: 'var(--muted)', maxWidth: '52ch' }}>
-                Reviewed and scored by the matching engine. Accept to begin the exchange.
-              </p>
+            <div style={{ marginBottom: 'var(--head-gap)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 'var(--s-4)', flexWrap: 'wrap' }}>
+              <div>
+                <h2 style={{ fontSize: 'var(--t-h2)', fontWeight: 500, letterSpacing: '-0.025em', marginBottom: 'var(--s-3)' }}>Suggested matches</h2>
+                <p style={{ fontSize: 'var(--t-lead)', color: 'var(--muted)', maxWidth: '52ch' }}>
+                  Compares every surplus listing with every request by material and quantity. Accept to begin the exchange.
+                </p>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-3)' }}>
+                <span role="status" style={{ fontSize: 'var(--t-label)', color: 'var(--muted)' }}>{findResult}</span>
+                <button
+                  type="button"
+                  onClick={() => void findMatches()}
+                  disabled={finding}
+                  className="accept-btn"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', height: 'var(--btn-h)', padding: '0 var(--s-5)',
+                    borderRadius: 'var(--r-btn)', border: '1px solid transparent',
+                    font: '500 var(--t-body)/1 var(--font-text)',
+                    background: 'var(--action)', color: 'var(--action-ink)', opacity: finding ? 0.7 : 1,
+                  }}
+                >
+                  {finding ? 'Checking listings…' : 'Find matches'}
+                </button>
+              </div>
             </div>
+            {matches.length === 0 && (
+              <p style={{ fontSize: 'var(--t-body)', color: 'var(--muted)', maxWidth: '64ch', lineHeight: 1.6 }}>
+                No suggested matches yet. Click <strong>Find matches</strong> to compare the listings above.
+                Scrap offers that SupplyMash spots from orders stay private until the holder accepts. Answer those on the{' '}
+                <Link href="/orders" style={{ color: 'var(--ink)', textDecoration: 'underline' }}>Orders</Link> page.
+              </p>
+            )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--card-gap)' }}>
               {matches.map((m) => (
                 <div

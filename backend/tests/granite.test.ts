@@ -85,6 +85,18 @@ describe('Granite client', () => {
     assert.equal(await graniteChat('s', 'u'), null);
   });
 
+  it('after one failure, later calls fall back instantly without touching the network', async () => {
+    const calls = fakeWatsonx({ chatStatus: 503 });
+    assert.equal(await graniteChat('s', 'u'), null);
+    const chatsAfterFailure = calls.chat;
+    assert.equal(await graniteChat('s', 'u'), null);
+    assert.equal(await graniteChat('s', 'u'), null);
+    assert.equal(calls.chat, chatsAfterFailure, 'no further watsonx calls while skipping');
+    resetGraniteToken(); // the skip window ends
+    fakeWatsonx({ parse: 'back' });
+    assert.equal(await graniteChat('free-text supply order', 'u'), 'back');
+  });
+
   it('gives up after the timeout', async () => {
     stubExternalFetch((_url, init) => new Promise((_resolve, reject) => {
       init.signal?.addEventListener('abort', () => reject(new Error('aborted')));

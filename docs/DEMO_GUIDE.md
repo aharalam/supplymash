@@ -28,9 +28,11 @@ Everything below has been verified on the `/orders` page with real watsonx Grani
 5. **Open these browser tabs:**
    - Tab 1: http://localhost:5173/orders
    - Tab 2: https://dashboard.stripe.com/test/payments, logged in, in **test mode**
-6. **Warm up Granite.** The first call is slower because it fetches an IBM login token.
+6. **Warm up Granite and Stripe.** The first call to each is slower: Granite fetches an IBM login token, and the first pool close creates the Stripe test customers.
    1. As any café, place one order.
-   2. Switch the persona to **SupplyMash operator** and click **Reset demo data** at the bottom of the page.
+   2. Switch to **SupplyMash operator** and click **Close pool** on Motor City Restaurant Supply.
+   3. Click **Reset demo data** at the bottom of the page.
+   4. Customers and the token survive a reset, so the live close takes about a second instead of about five.
 7. Set browser zoom to about 125% so the room can read the screen. Close other tabs, and turn on Do Not Disturb.
 
 ## 3. Right before you start
@@ -38,6 +40,7 @@ Everything below has been verified on the `/orders` page with real watsonx Grani
 - The persona switcher (top right) is set to **SupplyMash operator**.
 - Click **Reset demo data** once.
 - Check that the pool shows 2 businesses and **$273.50**.
+- **Don't accept anything on the Exchange page after this reset.** Accepting a match for Kent County Pastures fills the farm's request, and then the lumber order in the demo has no farm to offer its scrap to.
 
 ## 4. The demo (about 3 minutes)
 
@@ -60,11 +63,13 @@ Everything below has been verified on the `/orders` page with real watsonx Grani
 
 | Problem | What to do or say |
 |---|---|
+| The first order hangs for about 5 seconds | Venue Wi-Fi can't reach watsonx. Keep talking; it falls back after 5 seconds, and every later step is instant. |
 | A tag says **Parsed by fallback matcher**, or there's no Granite label | Keep going. Say: "Venue Wi-Fi can't reach watsonx, so our backup parser takes over and the demo still works." The numbers are the same, but scrap shows 114 lbs instead of 99. |
 | An invoice says **Charged (test mock)** | Stripe couldn't be reached. Skip the Stripe tab and keep going. |
 | Something looks wrong mid-demo | Switch to operator, click **Reset demo data**, and restart from 0:25. |
 | The page won't load | Check both terminals are still running. If they aren't, **play the backup video**. |
 | You clicked the wrong persona | Just switch back. Nothing breaks. |
+| Wi-Fi is bad before you even start | Blank `WATSONX_API_KEY` in `backend/.env` and restart the backend. Everything runs on the fallback, with no waiting. |
 
 ## 6. Judges' likely questions
 

@@ -2,7 +2,26 @@ import { Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '../models/store';
 import { Match } from '../types';
-import { isHiddenScrapMatch, notifyScrapAnswer } from '../services/scrap';
+import { isHiddenScrapMatch, notifyRequestFilled, notifyScrapAnswer } from '../services/scrap';
+
+/**
+ * A surplus or a request can only be traded once. When a match is accepted, close every
+ * other pending match that shares its surplus listing or its request listing.
+ */
+function closeSiblingMatches(accepted: Match): void {
+  for (const m of db.matches) {
+    if (m === accepted || m.status !== 'pending') continue;
+    if (m.offeringListingId !== accepted.offeringListingId && m.requestingListingId !== accepted.requestingListingId) continue;
+    m.status = 'declined';
+    if (m.direction === 'ask_holder') {
+      const offer = db.listings.find((l) => l.id === m.offeringListingId);
+      if (offer) offer.status = 'expired';
+      notifyRequestFilled(m);
+    }
+  }
+}
+
+const ALREADY_FILLED = 'This exchange is no longer available: one of its listings was already matched';
 
 export const getMatches = (_req: Request, res: Response): void => {
   // Inferred-scrap offers stay private until the holder accepts (spec §6).
@@ -81,11 +100,18 @@ export const respondToMatch = (req: Request, res: Response): void => {
       res.status(409).json({ error: `This offer was already ${match.status}` });
       return;
     }
-    match.status = status;
     const request = db.listings.find((l) => l.id === match.requestingListingId);
+    if (status === 'accepted' && request?.status !== 'active') {
+      match.status = 'declined';
+      offer.status = 'expired';
+      res.status(409).json({ error: ALREADY_FILLED });
+      return;
+    }
+    match.status = status;
     if (status === 'accepted') {
       offer.status = 'matched';
       if (request) request.status = 'matched';
+      closeSiblingMatches(match);
     } else {
       offer.status = 'expired';
     }
@@ -98,15 +124,25 @@ export const respondToMatch = (req: Request, res: Response): void => {
     res.status(400).json({ error: 'status must be accepted, declined, or completed' });
     return;
   }
-  match.status = status;
+  if (match.status !== 'pending') {
+    res.status(409).json({ error: `This match was already ${match.status}` });
+    return;
+  }
 
   // Update listing statuses on acceptance
   if (status === 'accepted') {
     const offer = db.listings.find((l) => l.id === match.offeringListingId);
     const request = db.listings.find((l) => l.id === match.requestingListingId);
-    if (offer) offer.status = 'matched';
-    if (request) request.status = 'matched';
+    if (offer?.status !== 'active' || request?.status !== 'active') {
+      match.status = 'declined';
+      res.status(409).json({ error: ALREADY_FILLED });
+      return;
+    }
+    offer.status = 'matched';
+    request.status = 'matched';
   }
+  match.status = status;
+  if (status === 'accepted') closeSiblingMatches(match);
 
   res.json(match);
 };

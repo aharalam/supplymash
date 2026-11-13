@@ -12,9 +12,14 @@
 const IAM_URL = 'https://iam.cloud.ibm.com/identity/token';
 const API_VERSION = '2024-10-08';
 const DEFAULT_MODEL = 'ibm/granite-4-h-small'; // the Granite chat model offered in Dallas (us-south)
-export const GRANITE_TIMEOUT_MS = 8000;
+// Granite normally answers in 1–1.5 s. On a bad network, waiting longer only stalls the demo.
+export const GRANITE_TIMEOUT_MS = 5000;
+// After a failure, skip Granite for a while so every later call falls back instantly
+// instead of each waiting out its own timeout (a lumber order makes three calls).
+const SKIP_AFTER_FAILURE_MS = 60_000;
 
 let cachedToken: { value: string; expiresAt: number } | null = null;
+let skipUntil = 0;
 
 function config() {
   return {
@@ -30,9 +35,10 @@ export function graniteConfigured(): boolean {
   return Boolean(c.apiKey && c.projectId);
 }
 
-/** Test hook: forget the cached IAM token. */
+/** Test hook: forget the cached IAM token and any recent failure. */
 export function resetGraniteToken(): void {
   cachedToken = null;
+  skipUntil = 0;
 }
 
 async function iamToken(apiKey: string, signal: AbortSignal): Promise<string> {
@@ -58,6 +64,7 @@ export async function graniteChat(
 ): Promise<string | null> {
   const c = config();
   if (!c.apiKey || !c.projectId) return null;
+  if (Date.now() < skipUntil) return null;
   const signal = AbortSignal.timeout(timeoutMs);
   try {
     const token = await iamToken(c.apiKey, signal);
@@ -82,7 +89,8 @@ export async function graniteChat(
     if (!text) throw new Error('empty completion');
     return text;
   } catch (err) {
-    console.warn(`[granite] falling back: ${(err as Error).message}`);
+    skipUntil = Date.now() + SKIP_AFTER_FAILURE_MS;
+    console.warn(`[granite] falling back for the next ${SKIP_AFTER_FAILURE_MS / 1000}s: ${(err as Error).message}`);
     return null;
   }
 }

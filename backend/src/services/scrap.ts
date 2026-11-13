@@ -268,6 +268,20 @@ function dealFor(offer: ResourceListing, counterparty: Business, price: number):
   };
 }
 
+/** Tell a holder their pending offer closed because the request was filled another way. */
+export function notifyRequestFilled(match: Match): void {
+  const offer = db.listings.find((l) => l.id === match.offeringListingId);
+  if (!offer) return;
+  notify(
+    offer.businessId,
+    'scrap_filled',
+    'That scrap request was filled',
+    `The business that asked for your ${offer.title.toLowerCase()} found it elsewhere, so this offer has closed. ` +
+      'We will match your leftovers with the next request nearby.',
+    { matchId: match.id },
+  );
+}
+
 /** Updates sent when the holder answers an ask-holder offer. */
 export function notifyScrapAnswer(match: Match): void {
   const offer = db.listings.find((l) => l.id === match.offeringListingId);

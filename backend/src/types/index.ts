@@ -264,7 +264,7 @@ export interface ScrapDeal {
 export interface Notification {
   id: string;
   businessId: string;
-  kind: 'pool_grew' | 'pool_closed' | 'charge_failed' | 'scrap_offer' | 'scrap_requested' | 'scrap_accepted' | 'scrap_declined';
+  kind: 'pool_grew' | 'pool_closed' | 'charge_failed' | 'scrap_offer' | 'scrap_requested' | 'scrap_accepted' | 'scrap_declined' | 'scrap_filled';
   title: string;
   body: string;
   createdAt: string;
