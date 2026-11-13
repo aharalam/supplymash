@@ -79,6 +79,8 @@ export interface PurchaseOrder {
   deliveryFee: number;
   total: number;
   emailText: string;
+  /** Who wrote the greeting. Numbers always come from the price list. */
+  emailBy: 'granite' | 'template';
 }
 
 export interface Invoice {
@@ -126,6 +128,8 @@ export interface ScrapOffer {
   counterpartyLabel: string;
   distanceMiles: number;
   aiReasoning: string;
+  /** Show the Granite label only when this is 'granite'. */
+  reasoningBy: 'granite' | 'template';
   status: 'pending' | 'accepted' | 'declined';
 }
 

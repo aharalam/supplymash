@@ -30,6 +30,7 @@ export const createBusiness = (req: Request, res: Response): void => {
     contactEmail,
     description: description ?? '',
     enrolledFeatures: enrolledFeatures ?? [],
+    usualSupplierIds: (req.body as Partial<Business>).usualSupplierIds ?? [],
     createdAt: new Date().toISOString(),
   };
   db.businesses.push(business);

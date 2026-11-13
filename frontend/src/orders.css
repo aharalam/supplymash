@@ -133,3 +133,11 @@ code { font-family:var(--font-mono); font-size:12px; overflow-wrap:anywhere; }
   .savings-row { grid-template-columns:1fr 1fr; }
   .savings-row__win { grid-column:1/-1; }
 }
+
+/* Open pools a business can join, shown before it orders */
+.orders-page .business-grid__side > section + section { margin-top:32px; }
+.open-pools > .field-hint { margin:8px 0 16px; }
+.open-pool { padding:20px; border:1px solid #d9dfd2; border-radius:10px; }
+.open-pool + .open-pool { margin-top:12px; }
+.open-pool h3 { font-size:16px; margin:0 0 12px; }
+.open-pool .field-hint { margin:10px 0 0; }

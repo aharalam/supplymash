@@ -1,23 +1,54 @@
 # Current state
 
-- Event / milestone: Michigan DevFest Hackathon 2026. The order-first scope was approved on 2026-11-13; the backend build has not started.
-- Current working demo slice: the legacy listings-board app (register → list → run matching → accept; pools; warehouses). It has not been re-verified this session.
-- In progress / owner: the backend devs build in IBM Bob IDE, following the prompts in `docs/BOB_HANDOFF.md`.
-- Next action: Bob prompt 0 (plan), then prompt 1 (stub endpoints), then commit and push so the frontend can build against the contract.
+- Event / milestone: Michigan DevFest Hackathon 2026. **The order-first backend is complete** (2026-11-13). Prompts 0–3 were built in IBM Bob; prompts 4–8 were finished by Claude at the team's request.
+- What works (backend):
+  - Orders parsed by Granite, with a keyword fallback.
+  - Anonymous pools: tier pricing, free delivery and merging a second order.
+  - Inferred scrap offers; only the holder can accept, and offers stay hidden until accepted.
+  - Close pool: Stripe test charges (mock without a key; a declined card is dropped and repriced), plus the combined PO email.
+  - Metrics, demo reset, and seeded warehouses.
+- Verification: `cd backend && npm test` (74 tests + 19 pricing checks), `npm run build`, and the full demo path walked with curl on the built server.
+- Verified live: real watsonx.ai Granite and Stripe test mode, and the frontend against the real API (see below).
+- Next action:
+  1. Push.
+  2. Frontend wires the new screens (`docs/FRONTEND_HANDOFF.md`).
+  3. Add watsonx and Stripe test keys to `backend/.env` and rerun the demo path.
+  4. Every member saves a Bob usage PNG in `bob_usage/`.
 - Known failures / blockers:
   - The deadline, submission format and demo length are unknown.
   - Whether deployment is allowed is unclear in the guide.
   - Product name: SupplyMash or SupplyMesh.
+- Spec deviation (Claude's call): solo cost uses the bulk tier a business's own quantity reaches, so savings are never overstated.
 
 ## Last verified end-to-end demo
-- **Result:** NOT YET VERIFIED
-- **Full Git commit SHA:** N/A
-- **Timestamp and timezone:** N/A
-- **Environment / deployment URL:** N/A
-- **Scenario / observable result:** N/A
-- **Uncommitted changes affecting demo:** N/A
-- **Known failures:** N/A
-- **Next verification:** Once first vertical slice runs, execute the complete judge-visible journey and record actual results.
+- **Result:** PASSED. The full demo path ran in the browser on the merged frontend and backend.
+- **Base commit:** `b40068d82013a997c41a5c24a586506d23e44dd8`, plus the uncommitted integration fixes listed below.
+- **Timestamp:** 2026-11-13, America/Detroit.
+- **Environment:**
+  - Local: backend built (`npm start`, :3001), frontend `next dev` (:5173).
+  - Real watsonx.ai (`ibm/granite-4-h-small`, Dallas) and real Stripe **test mode**.
+- **Scenario:**
+  1. Greektown sees an open pool (2 businesses, $76.50 to free delivery).
+  2. It orders "3 cases of 8 oz cups and 3 gallons of cleaner", parsed by Granite. It pays $99 instead of $144.
+  3. The furniture maker orders lumber, and Granite offers 99 lbs of pine offcuts to "A farm 11 mi away".
+  4. The holder accepts, and names are revealed.
+  5. The farm's view shows nothing about the holder's order.
+  6. The operator closes the pool: a $372.50 PO with a Granite greeting, and 3 real Stripe test PaymentIntents.
+  7. Metrics show $142.50 saved, 2 deliveries avoided, 99 lbs diverted and $378.04 kept in Michigan.
+  8. No console errors. At 375px, no horizontal scroll.
+- **Fixes made during this run (uncommitted):**
+  - Backend:
+    - The requester saw the holder's order text (privacy leak).
+    - Closed pools still showed a next milestone.
+    - The Granite model `granite-3-3-8b-instruct` isn't offered in Dallas, so the default is now `granite-4-h-small`.
+    - Granite could call the whole purchase "scrap".
+    - "1 days" grammar.
+  - Frontend:
+    - The Granite label showed even on template text.
+    - The price showed as $0.06/lbs instead of $0.056/lb.
+    - The order card's scrap offer stayed "pending" after it was accepted.
+    - No open-pool view before ordering.
+- **Known failures:** none in the demo path.
 
 ## Deadline and demo protection
 - Event deadline / timezone: UNKNOWN

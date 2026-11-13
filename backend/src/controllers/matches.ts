@@ -2,9 +2,11 @@ import { Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '../models/store';
 import { Match } from '../types';
+import { isHiddenScrapMatch } from '../services/scrap';
 
 export const getMatches = (_req: Request, res: Response): void => {
-  res.json(db.matches);
+  // Inferred-scrap offers stay private until the holder accepts (spec §6).
+  res.json(db.matches.filter((m) => !isHiddenScrapMatch(m)));
 };
 
 /**
@@ -62,7 +64,35 @@ export const respondToMatch = (req: Request, res: Response): void => {
     res.status(404).json({ error: 'Match not found' });
     return;
   }
-  const { status } = req.body as { status: Match['status'] };
+  const { status } = (req.body ?? {}) as { status: Match['status'] };
+
+  if (match.direction === 'ask_holder') {
+    // Only the holder decides (spec §8B).
+    const offer = db.listings.find((l) => l.id === match.offeringListingId);
+    if (!offer || req.header('x-business-id') !== offer.businessId) {
+      res.status(403).json({ error: 'Only the business holding the scrap can accept or decline this offer' });
+      return;
+    }
+    if (status !== 'accepted' && status !== 'declined') {
+      res.status(400).json({ error: 'status must be accepted or declined' });
+      return;
+    }
+    if (match.status !== 'pending') {
+      res.status(409).json({ error: `This offer was already ${match.status}` });
+      return;
+    }
+    match.status = status;
+    const request = db.listings.find((l) => l.id === match.requestingListingId);
+    if (status === 'accepted') {
+      offer.status = 'matched';
+      if (request) request.status = 'matched';
+    } else {
+      offer.status = 'expired';
+    }
+    res.json(match);
+    return;
+  }
+
   if (!['accepted', 'declined', 'completed'].includes(status)) {
     res.status(400).json({ error: 'status must be accepted, declined, or completed' });
     return;

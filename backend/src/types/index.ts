@@ -8,6 +8,8 @@ export interface Business {
   contactEmail: string;
   description: string;
   enrolledFeatures: Feature[];
+  usualSupplierIds: string[];
+  stripeCustomerId?: string;
   createdAt: string;
 }
 
@@ -46,6 +48,10 @@ export interface ResourceListing {
   status: ListingStatus;
   createdAt: string;
   expiresAt?: string;
+  // Order-first scrap (§6): set on listings inferred from an order
+  source?: 'inferred_from_order';
+  orderId?: string;
+  readyInDays?: number;
 }
 
 export type ListingType = 'offering' | 'requesting';
@@ -124,6 +130,10 @@ export interface Match {
   aiReasoning: string;
   status: MatchStatus;
   createdAt: string;
+  // Order-first scrap (§6): ask the inferred holder whether to sell
+  direction?: 'ask_holder';
+  suggestedPricePerUnit?: number;
+  reasoningBy?: 'granite' | 'template';
 }
 
 export type MatchStatus = 'pending' | 'accepted' | 'declined' | 'completed';
@@ -188,6 +198,7 @@ export interface PurchaseOrder {
   deliveryFee: number;
   total: number;
   emailText: string;
+  emailBy: 'granite' | 'template';
 }
 
 export interface Invoice {
@@ -235,6 +246,7 @@ export interface ScrapOffer {
   counterpartyLabel: string;
   distanceMiles: number;
   aiReasoning: string;
+  reasoningBy: 'granite' | 'template';
   status: 'pending' | 'accepted' | 'declined';
 }
 

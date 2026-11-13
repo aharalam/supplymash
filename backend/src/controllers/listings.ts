@@ -2,10 +2,12 @@ import { Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '../models/store';
 import { ResourceListing } from '../types';
+import { isHiddenScrapListing } from '../services/scrap';
 
 export const getListings = (req: Request, res: Response): void => {
   const { type, materialCategory, status } = req.query;
-  let results = db.listings;
+  // Inferred-scrap listings stay private until the holder accepts (spec §6).
+  let results = db.listings.filter((l) => !isHiddenScrapListing(l));
   if (type) results = results.filter((l) => l.type === type);
   if (materialCategory) results = results.filter((l) => l.materialCategory === materialCategory);
   if (status) results = results.filter((l) => l.status === status);
@@ -15,7 +17,7 @@ export const getListings = (req: Request, res: Response): void => {
 
 export const getListingById = (req: Request, res: Response): void => {
   const listing = db.listings.find((l) => l.id === req.params.id);
-  if (!listing) {
+  if (!listing || isHiddenScrapListing(listing)) {
     res.status(404).json({ error: 'Listing not found' });
     return;
   }
