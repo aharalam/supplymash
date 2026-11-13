@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import '../index.css';
 import '../hover.css';
 import '../workspace.css';
+import '../orders.css';
 import Navigation from '../components/Navigation';
 export const metadata: Metadata = { title: 'SupplyMash | Michigan business network', description: 'Exchange materials, pool orders, and share storage with Michigan businesses.' };
 export default function RootLayout({ children }: { children: ReactNode }) {
