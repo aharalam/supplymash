@@ -1,73 +1,53 @@
 # Implementation plan
 
+Approved 2026-11-13. Detailed design: `docs/superpowers/specs/2026-11-13-supplymash-order-first-design.md`. Build prompts for IBM Bob: `docs/BOB_HANDOFF.md`.
+
 ## Architecture and stack
 
-- **Frontend:** React 18 + Vite + TypeScript + Tailwind CSS + React Router + Axios
-- **Backend:** Node.js + Express + TypeScript, in-memory store for MVP
-- **AI matching:** Heuristic engine (MVP); upgrade path to IBM watsonx.ai Granite model for semantic matching
-- **Storage:** In-memory (MVP); upgrade path to IBM Cloudant for persistence
-- **Deployment:** Local dev (MVP); upgrade path to IBM Code Engine container
-- **Monorepo structure:** `frontend/` and `backend/` directories, shared `docker-compose.yml`
+- **Frontend:** React 19, Vite, TypeScript, Tailwind. Persona switcher sets `X-Business-Id`. Optional Google Maps view.
+- **Backend:** the existing Node.js, Express and TypeScript service with an in-memory store, extended with:
+  - `services/parser` (Granite, alias fallback)
+  - `services/pricing` (solo vs pooled, bulk tiers, delivery split)
+  - `services/pools` (join/merge, viewer and operator views, close → PO and invoices)
+  - `services/scrap` (Granite byproduct inference → nearest requester within 60 miles)
+  - `services/writer` (Granite text, templates as fallback)
+  - `services/payments` (Stripe test mode, mock fallback)
+  - `services/metrics`
+- **IBM:**
+  - Bob IDE for all coding (required).
+  - watsonx.ai Granite for three narrow JSON jobs.
+  - Stretch: an Orchestrate agent using the API as tools, Code Engine deploy, Cloudant.
+- **Google Cloud:** Maps JavaScript API on the frontend only.
+- **New API:**
+  - `GET /api/suppliers`
+  - `POST/GET /api/orders`
+  - `GET /api/pools[/:id]`
+  - `POST /api/pools/:id/close`
+  - `GET /api/scrap-offers`
+  - `GET /api/metrics`
+  - `POST /api/demo/reset`
+  - Legacy endpoints stay; they hide pending inferred scrap.
 
-## Components and data flow
+## Vertical slices (in order)
 
-```
-Browser (React SPA)
-  ↕ axios /api/*
-Express REST API (port 3001)
-  ↕ in-memory store
-  Matching engine (src/controllers/matches.ts)
-```
+1. Stub endpoints with seed-shaped data, so the frontend is unblocked at 0:15.
+2. Order → parse (fallback first, then Granite) → pool join with real pricing.
+3. Inferred scrap offer → holder accepts or declines.
+4. Close pool → PO email, then Stripe charges (mock first).
+5. Metrics, frontend integration, then freeze and rehearse from `demo/reset`.
 
-## Biggest technical unknown and fastest proof
+## Ownership and timeline (2-hour backend)
 
-Proving the AI matching value story with IBM watsonx.ai is the riskiest dependency.  
-**Fastest proof:** The heuristic matcher in `src/controllers/matches.ts` demonstrates the concept end-to-end without an IBM Cloud account.  
-**Next step:** Wire in watsonx.ai SDK with a Granite model call to replace the heuristic when IBM Cloud credentials are available.
+- **Dev A:** types and stubs → pricing and pools → close and payments → metrics.
+- **Dev B:** seed and reset → parser and writer → scrap → integration testing.
+- **Frontend (2):** build against the stubs, following §11 of the spec.
+- **Feature freeze** at 1:45, with two full rehearsals.
 
-## Core demo journey (vertical slices)
+## Risks
 
-| Slice | What is shown | Status |
-|---|---|---|
-| Register businesses | POST /api/businesses → see in dashboard | ✅ Done |
-| Post recycling listings | POST /api/listings → see on exchange board | ✅ Done |
-| Run AI matching | POST /api/matches/run → see match cards with reasoning | ✅ Done |
-| Accept a match | PUT /api/matches/:id/respond → listings update to "matched" | ✅ Done |
-| Join order pool | POST /api/order-pools/:id/join → savings estimate updates | ✅ Done |
-| Rent warehouse | POST /api/warehouses/:id/join → availability decrements | ✅ Done |
+- Granite or Stripe outages: covered by fallbacks.
+- Savings maths: unit-tested on the seed.
+- Hosting confusion: run locally and record a backup video.
+- Bob visibility: keep usage screenshots in `bob_usage/`.
 
-## UI direction
-
-- Green brand color (green-800 primary, green-700 accents)
-- Clean card-based layout with Tailwind utility classes
-- No design library dependency — pure Tailwind CSS
-
-## Critical-path milestones
-
-| Milestone / acceptance evidence | Owner | Target | Status |
-|---|---|---|---|
-| Backend compiles and health check returns 200 | Backend team | Day 1 | ✅ Done |
-| Frontend renders dashboard with live API data | Frontend team | Day 1 | ✅ Done |
-| End-to-end demo: register → list → match → accept | Full team | Day 1 | ✅ Done |
-| watsonx.ai Granite integration (optional) | Backend team | Day 2 | Pending IBM Cloud access |
-| Bob usage screenshot uploaded to bob_usage/ | Each member | Before submission | ⏳ Required |
-| IBM Code Engine deployment (optional) | Backend team | Day 2 | Pending |
-
-## Lightweight task ownership
-
-| Task | Owner | Status |
-|---|---|---|
-| Express API, routes, controllers, types | Backend team (2) | ✅ Done |
-| React pages: Dashboard, RecyclingExchange, OrderPooling, Warehouses, Register | Frontend team (2) | ✅ Done |
-| watsonx.ai Granite matching integration | Backend team | Pending Cloud access |
-| Docker / Code Engine deployment | Backend team | Pending |
-| IBM Bob usage screenshots | All 4 members | Required before submit |
-| Demo rehearsal + pitch preparation | All | Before submission |
-
-## Event deadline and timezone
-
-Unknown — verify on ibm.biz/midevfest26.
-
-## Demo rehearsal / submission buffer
-
-Schedule a rehearsal 2 hours before the submission deadline.
+Event deadline and timezone: UNKNOWN. Verify on ibm.biz/midevfest26.

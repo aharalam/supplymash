@@ -6,6 +6,10 @@
 
 ---
 
+## Current build (read first)
+
+The approved backend scope is `docs/superpowers/specs/2026-11-13-supplymash-order-first-design.md`. Build steps for IBM Bob are in `docs/BOB_HANDOFF.md`. The spec wins over older notes in this file and in PLAN.md.
+
 ## Context files — read these at the start of every session
 
 | File | What it contains |

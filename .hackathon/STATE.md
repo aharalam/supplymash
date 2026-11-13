@@ -1,10 +1,13 @@
 # Current state
 
-- Event / milestone: No event active.
-- Current working demo slice: None.
-- In progress / owner: None.
-- Next action: Provide an event name/URL; research real problems before team ideation.
-- Known failures / blockers: No event or product selected. Profile-level Superpowers may need first-use installation.
+- Event / milestone: Michigan DevFest Hackathon 2026. The order-first scope was approved on 2026-11-13; the backend build has not started.
+- Current working demo slice: the legacy listings-board app (register → list → run matching → accept; pools; warehouses). It has not been re-verified this session.
+- In progress / owner: the backend devs build in IBM Bob IDE, following the prompts in `docs/BOB_HANDOFF.md`.
+- Next action: Bob prompt 0 (plan), then prompt 1 (stub endpoints), then commit and push so the frontend can build against the contract.
+- Known failures / blockers:
+  - The deadline, submission format and demo length are unknown.
+  - Whether deployment is allowed is unclear in the guide.
+  - Product name: SupplyMash or SupplyMesh.
 
 ## Last verified end-to-end demo
 - **Result:** NOT YET VERIFIED
