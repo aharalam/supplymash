@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { businessApi, listingsApi, matchesApi } from '../api';
+import NetworkGraph, { type NetworkNode, type NetworkEdge } from '../components/NetworkGraph';
 
 interface Stats {
   businesses: number;
@@ -7,12 +8,30 @@ interface Stats {
   matches: number;
 }
 
+// Deterministic positions arranged in a loose circle for N nodes
+function layoutPositions(count: number): [number, number, number][] {
+  const positions: [number, number, number][] = [];
+  for (let i = 0; i < count; i++) {
+    const angle = (i / count) * Math.PI * 2;
+    const r = 3.5 + (i % 2) * 1.2;
+    positions.push([
+      Math.cos(angle) * r,
+      (i % 3) * 0.6 - 0.6,
+      Math.sin(angle) * r,
+    ]);
+  }
+  return positions;
+}
+
 export default function Dashboard() {
   const [stats, setStats] = useState<Stats>({ businesses: 0, activeListings: 0, matches: 0 });
-  const [runResult, setRunResult] = useState<string | null>(null);
+  const [nodes, setNodes] = useState<NetworkNode[]>([]);
+  const [edges, setEdges] = useState<NetworkEdge[]>([]);
   const [loading, setLoading] = useState(false);
+  const [runResult, setRunResult] = useState<string | null>(null);
+  const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
 
-  useEffect(() => {
+  const loadAll = useCallback(() => {
     Promise.all([businessApi.list(), listingsApi.list(), matchesApi.list()]).then(
       ([businesses, listings, matches]) => {
         setStats({
@@ -20,94 +39,155 @@ export default function Dashboard() {
           activeListings: listings.length,
           matches: matches.length,
         });
+
+        // Build graph nodes from businesses
+        const positions = layoutPositions(businesses.length);
+        const graphNodes: NetworkNode[] = businesses.map(
+          (b: { id: string; name: string; type: NetworkNode['type']; enrolledFeatures: string[] }, i: number) => ({
+            id: b.id,
+            label: b.name,
+            type: b.type,
+            position: positions[i],
+            features: b.enrolledFeatures,
+          }),
+        );
+        setNodes(graphNodes);
+
+        // Build graph edges from matches
+        const graphEdges: NetworkEdge[] = matches.map(
+          (m: { id: string; offeringListingId: string; requestingListingId: string; material: string; compatibilityScore: number; status: string }) => {
+            // Find business IDs from listing IDs
+            const offerListing = listings.find((l: { id: string; businessId: string }) => l.id === m.offeringListingId);
+            const reqListing = listings.find((l: { id: string; businessId: string }) => l.id === m.requestingListingId);
+            return {
+              id: m.id,
+              from: offerListing?.businessId ?? '',
+              to: reqListing?.businessId ?? '',
+              material: m.material,
+              score: m.compatibilityScore,
+              status: m.status,
+            };
+          },
+        ).filter((e: NetworkEdge) => e.from && e.to);
+        setEdges(graphEdges);
       },
     );
-  }, [runResult]);
+  }, []);
+
+  useEffect(() => { loadAll(); }, [loadAll]);
 
   const handleRunMatching = async () => {
     setLoading(true);
     try {
       const result = await matchesApi.run();
-      setRunResult(`Found ${result.matched} new match${result.matched !== 1 ? 'es' : ''}!`);
+      setRunResult(`${result.matched} new match${result.matched !== 1 ? 'es' : ''} found`);
+      loadAll();
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold text-gray-800 mb-2">SupplyMash Dashboard</h1>
-      <p className="text-gray-500 mb-8">
-        Connect Michigan businesses to share resources, reduce waste, and cut delivery costs.
-      </p>
-
-      {/* Stat cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
-        <StatCard label="Registered Businesses" value={stats.businesses} color="blue" />
-        <StatCard label="Active Listings" value={stats.activeListings} color="green" />
-        <StatCard label="Total Matches" value={stats.matches} color="purple" />
+    <div className="space-y-8">
+      {/* Hero title */}
+      <div className="text-center pt-2">
+        <h1 className="text-4xl font-bold text-white tracking-tight mb-2">
+          Supply Network
+        </h1>
+        <p className="text-slate-400 text-base max-w-lg mx-auto">
+          Live map of Michigan businesses exchanging resources, pooling orders, and sharing storage.
+        </p>
       </div>
 
-      {/* Features overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+      {/* 3D Network graph */}
+      <div className="rounded-2xl overflow-hidden border border-slate-800 shadow-2xl" style={{ height: 460 }}>
+        <NetworkGraph
+          nodes={nodes}
+          edges={edges}
+          onNodeClick={(n) => setSelectedNode(selectedNode?.id === n.id ? null : n)}
+        />
+      </div>
+
+      {/* Selected node info */}
+      {selectedNode && (
+        <div className="bg-slate-900 border border-slate-700 rounded-xl p-4 flex items-center justify-between">
+          <div>
+            <p className="text-white font-semibold">{selectedNode.label}</p>
+            <p className="text-slate-400 text-sm capitalize mt-0.5">
+              {selectedNode.type} · enrolled in {selectedNode.features.length} program{selectedNode.features.length !== 1 ? 's' : ''}
+            </p>
+          </div>
+          <button onClick={() => setSelectedNode(null)} className="text-slate-500 hover:text-slate-300 text-xl leading-none">×</button>
+        </div>
+      )}
+
+      {/* Stats row */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard label="Businesses" value={stats.businesses} accent="#38bdf8" />
+        <StatCard label="Active Listings" value={stats.activeListings} accent="#4ade80" />
+        <StatCard label="Matches" value={stats.matches} accent="#c084fc" />
+      </div>
+
+      {/* Features + AI trigger */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <FeatureCard
           emoji="♻️"
-          title="Industrial Recycling Exchange"
-          desc="Post excess materials or find raw inputs. AI automatically identifies compatible businesses to propose trades."
+          title="Recycling Exchange"
+          desc="Post excess materials. AI surfaces businesses that need exactly what you produce."
+          accent="#f97316"
         />
         <FeatureCard
           emoji="📦"
-          title="Local Order Pooling"
-          desc="Combine orders with nearby businesses. Share delivery costs from the same supplier and unlock bulk pricing."
+          title="Order Pooling"
+          desc="Combine orders with nearby businesses from the same supplier to slash delivery fees."
+          accent="#38bdf8"
         />
         <FeatureCard
           emoji="🏭"
-          title="Shared Micro-Warehouses"
-          desc="Rent shared storage space in neighborhood hubs. Refrigerated options available for farms and restaurants."
+          title="Micro-Warehouses"
+          desc="Share neighborhood storage hubs — refrigerated space available for farms and restaurants."
+          accent="#4ade80"
         />
       </div>
 
-      {/* AI Matching CTA */}
-      <div className="bg-green-50 border border-green-200 rounded-xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+      {/* AI matching CTA */}
+      <div className="bg-gradient-to-r from-indigo-950 to-slate-900 border border-indigo-800/50 rounded-xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-green-800 mb-1">AI Resource Matching</h2>
-          <p className="text-sm text-green-700">
-            Run the matching engine to find compatible resource exchanges between registered businesses.
+          <h2 className="text-white font-semibold text-lg mb-1">Run AI Matching</h2>
+          <p className="text-slate-400 text-sm">
+            Find compatible resource exchanges and watch new edges appear in the network above.
           </p>
-          {runResult && <p className="mt-2 text-sm font-medium text-green-900">✅ {runResult}</p>}
+          {runResult && (
+            <p className="mt-2 text-sm font-medium text-emerald-400">✓ {runResult}</p>
+          )}
         </div>
         <button
           onClick={handleRunMatching}
           disabled={loading}
-          className="bg-green-700 hover:bg-green-800 text-white font-semibold px-6 py-2 rounded-lg transition-colors disabled:opacity-60 whitespace-nowrap"
+          className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold px-6 py-2.5 rounded-lg transition-colors whitespace-nowrap text-sm"
         >
-          {loading ? 'Running…' : '▶ Run Matching'}
+          {loading ? 'Matching…' : '▶ Run Matching'}
         </button>
       </div>
     </div>
   );
 }
 
-function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
-  const colorMap: Record<string, string> = {
-    blue: 'bg-blue-50 border-blue-200 text-blue-700',
-    green: 'bg-green-50 border-green-200 text-green-700',
-    purple: 'bg-purple-50 border-purple-200 text-purple-700',
-  };
+function StatCard({ label, value, accent }: { label: string; value: number; accent: string }) {
   return (
-    <div className={`rounded-xl border p-6 ${colorMap[color]}`}>
-      <div className="text-4xl font-bold">{value}</div>
-      <div className="text-sm mt-1 font-medium">{label}</div>
+    <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+      <div className="text-4xl font-bold mb-1" style={{ color: accent }}>{value}</div>
+      <div className="text-slate-400 text-sm font-medium">{label}</div>
     </div>
   );
 }
 
-function FeatureCard({ emoji, title, desc }: { emoji: string; title: string; desc: string }) {
+function FeatureCard({ emoji, title, desc, accent }: { emoji: string; title: string; desc: string; accent: string }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-      <div className="text-3xl mb-3">{emoji}</div>
-      <h3 className="font-semibold text-gray-800 mb-2">{title}</h3>
-      <p className="text-sm text-gray-600">{desc}</p>
+    <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 hover:border-slate-600 transition-colors">
+      <div className="text-2xl mb-3">{emoji}</div>
+      <h3 className="font-semibold mb-1.5" style={{ color: accent }}>{title}</h3>
+      <p className="text-slate-400 text-sm leading-relaxed">{desc}</p>
     </div>
   );
 }

@@ -7,27 +7,26 @@ import Register from './pages/Register';
 
 export default function App() {
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-    `px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+    `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
       isActive
-        ? 'bg-green-700 text-white'
-        : 'text-green-100 hover:bg-green-700 hover:text-white'
+        ? 'bg-indigo-600 text-white'
+        : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
     }`;
 
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-gray-50 flex flex-col">
-        {/* Nav */}
-        <nav className="bg-green-800 shadow-md">
+      <div className="min-h-screen flex flex-col" style={{ background: '#030712' }}>
+        <nav className="border-b border-slate-800/60 sticky top-0 z-50" style={{ background: 'rgba(3,7,18,0.85)', backdropFilter: 'blur(12px)' }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between h-16">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold text-white tracking-tight">SupplyMash</span>
-                <span className="text-green-300 text-sm hidden sm:inline">— Connect. Share. Save.</span>
+            <div className="flex items-center justify-between h-14">
+              <div className="flex items-center gap-3">
+                <span className="text-lg font-bold text-white tracking-tight">SupplyMash</span>
+                <span className="hidden sm:block text-xs text-slate-500 border-l border-slate-700 pl-3">Michigan DevFest 2026</span>
               </div>
-              <div className="flex items-center gap-1 flex-wrap">
+              <div className="flex items-center gap-1">
                 <NavLink to="/" end className={navLinkClass}>Dashboard</NavLink>
                 <NavLink to="/recycling" className={navLinkClass}>♻ Exchange</NavLink>
-                <NavLink to="/order-pooling" className={navLinkClass}>📦 Order Pooling</NavLink>
+                <NavLink to="/order-pooling" className={navLinkClass}>📦 Pooling</NavLink>
                 <NavLink to="/warehouses" className={navLinkClass}>🏭 Warehouses</NavLink>
                 <NavLink to="/register" className={navLinkClass}>+ Register</NavLink>
               </div>
@@ -35,7 +34,6 @@ export default function App() {
           </div>
         </nav>
 
-        {/* Page content */}
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <Routes>
             <Route path="/" element={<Dashboard />} />
@@ -46,7 +44,7 @@ export default function App() {
           </Routes>
         </main>
 
-        <footer className="text-center text-sm text-gray-400 py-4 border-t">
+        <footer className="text-center text-xs text-slate-700 py-4 border-t border-slate-800/40">
           SupplyMash — Michigan DevFest Hackathon 2026
         </footer>
       </div>
