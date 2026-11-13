@@ -1,13 +1,27 @@
 # Current state
 
-- Event / milestone: Michigan DevFest Hackathon 2026. The order-first scope was approved on 2026-11-13; the backend build has not started.
-- Current working demo slice: the legacy listings-board app (register → list → run matching → accept; pools; warehouses). It has not been re-verified this session.
-- In progress / owner: the backend devs build in IBM Bob IDE, following the prompts in `docs/BOB_HANDOFF.md`.
-- Next action: Bob prompt 0 (plan), then prompt 1 (stub endpoints), then commit and push so the frontend can build against the contract.
+- Event / milestone: Michigan DevFest Hackathon 2026. **The order-first backend is complete** (2026-11-13). Prompts 0–3 were built in IBM Bob; prompts 4–8 were finished by Claude at the team's request.
+- What works (backend):
+  - Orders parsed by Granite, with a keyword fallback.
+  - Anonymous pools: tier pricing, free delivery and merging a second order.
+  - Inferred scrap offers; only the holder can accept, and offers stay hidden until accepted.
+  - Close pool: Stripe test charges (mock without a key; a declined card is dropped and repriced), plus the combined PO email.
+  - Metrics, demo reset, and seeded warehouses.
+- Verification: `cd backend && npm test` (74 tests + 19 pricing checks), `npm run build`, and the full demo path walked with curl on the built server.
+- Not yet verified:
+  - Real watsonx.ai and real Stripe test keys. The code paths are covered with simulated APIs; no live keys were available.
+  - The frontend against the real API.
+- Next action:
+  1. Push.
+  2. Frontend wires the new screens (`docs/FRONTEND_HANDOFF.md`).
+  3. Add watsonx and Stripe test keys to `backend/.env` and rerun the demo path.
+  4. Every member saves a Bob usage PNG in `bob_usage/`.
 - Known failures / blockers:
   - The deadline, submission format and demo length are unknown.
   - Whether deployment is allowed is unclear in the guide.
+  - The team's watsonx.ai project has no Runtime service associated yet.
   - Product name: SupplyMash or SupplyMesh.
+- Spec deviation (Claude's call): solo cost uses the bulk tier a business's own quantity reaches, so savings are never overstated.
 
 ## Last verified end-to-end demo
 - **Result:** NOT YET VERIFIED

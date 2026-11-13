@@ -166,11 +166,12 @@ Never other business IDs, names or lines. With no header, the response is the op
 
 ## 7. Pricing rules (`pricing.ts`)
 
-- **Solo cost** of an order = Σ qty × base `unitPrice`, plus `deliveryFee` unless the solo subtotal ≥ `freeDeliveryMinimum`.
+- **Solo cost** of an order = Σ qty × the unit price for the bulk tier **that order's own qty** reaches (base `unitPrice` if none), plus `deliveryFee` unless the solo subtotal ≥ `freeDeliveryMinimum`. *(Amended during build: using the base price overstated savings for businesses that already earn a tier alone.)*
 - **Pooled cost**:
   - Each line is priced at the best `bulkTier` reached by the **pool's combined qty for that sku**. If no tier is reached, the base price applies.
   - Delivery is one shipment. If the pool subtotal ≥ `freeDeliveryMinimum`, the fee is 0. Otherwise the business pays `deliveryFee` × (its order subtotal ÷ pool subtotal).
 - **Savings** = solo cost − pooled cost, never below 0. Round to cents.
+- **Pool subtotal** always means the **pooled, tier-priced** subtotal: what the supplier will actually invoice. List prices are never used for it. Free delivery and progress use this figure.
 - **Progress**: the pool subtotal as a percentage of `freeDeliveryMinimum`, capped at 100. Also return `nextMilestone`, the next unreached tier or free delivery, with the amount still needed.
 - Savings are recalculated for every order in the pool whenever an order joins. At close, they become final.
 

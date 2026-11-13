@@ -1,6 +1,9 @@
 # Frontend handoff: order-first API
 
-As of commit `c6ef678`, every new endpoint is live as a **stub**. Stubs return realistic sample data in the final response shapes, so build every screen now. Each endpoint switches to real data as the backend prompts land (table below), and nothing about the shapes changes.
+**Update (backend complete):** every endpoint below now returns **real data**. All backend prompts are done and covered by `npm test` in `backend/` (74 tests plus 19 pricing checks). The shapes match what you built against the stubs. Three small additions:
+
+- `ScrapOffer.reasoningBy` and `PurchaseOrder.emailBy` (`'granite' | 'template'`): show the "powered by watsonx.ai Granite" label **only** when the value is `'granite'`.
+- Missing or blank fields on `POST /api/orders` now return **400**. **422** means the text didn't match anything in the catalog, and its `error` suggests items to try.
 
 Full contract: spec §9 in `docs/superpowers/specs/2026-11-13-supplymash-order-first-design.md`.
 TypeScript shapes: `backend/src/types/index.ts`. Copy the "§6" and "§9" sections into `frontend/src/api/types.ts`; don't hand-write them.
@@ -9,7 +12,8 @@ TypeScript shapes: `backend/src/types/index.ts`. Copy the "§6" and "§9" sectio
 
 - Backend: `cd backend && npm run dev`, on port 3001.
 - Frontend: `cd frontend && npm run dev`, on port 5173. Next rewrites `/api/*` to the backend, so keep the existing axios `baseURL: '/api'`. No CORS setup is needed.
-- Between rehearsals: `POST /api/demo/reset` reseeds data. It is a no-op until backend prompt 2 lands.
+- Between rehearsals: `POST /api/demo/reset` reseeds data, with the same fixed IDs every time.
+- On demo day, run the backend without auto-restart (`npm run build && npm start`). The dev server restarts on every file save, and a restart wipes in-memory data.
 
 ## The one rule: the viewer header
 
@@ -27,18 +31,18 @@ api.interceptors.request.use((c) => {
 
 ## Endpoints
 
-| Call | Use it for | Real after backend prompt |
-|---|---|---|
-| `GET /api/businesses` | Persona switcher list (existing endpoint) | 2 (new seed) |
-| `GET /api/suppliers` | Supplier dropdown, plus the catalog for hints | 2 |
-| `POST /api/orders` `{businessId, supplierId, text}` | Order form. Returns `201 {order, pool, scrapOffers, parsedBy}` | 5 |
-| `GET /api/orders` (header) | "My orders", each with `pool` | 5 |
-| `GET /api/pools` / `GET /api/pools/:id` | Pool card or progress bar (header), or the operator table (no header) | 3 |
-| `POST /api/pools/:id/close` | Operator "Close pool" button. Returns `{purchaseOrder, invoices}` | 7 |
-| `GET /api/scrap-offers` (header **required**, else 400) | Scrap offer inbox | 6 |
-| `PUT /api/matches/:matchId/respond` `{status:'accepted'\|'declined'}` (header) | Accept or decline, shown **only when `role === 'holder'`** | 6 (returns **404 until then**) |
-| `GET /api/metrics` | Metrics strip | 8 |
-| `POST /api/demo/reset` | Hidden "Reset demo" button | 2 |
+| Call | Use it for |
+|---|---|
+| `GET /api/businesses` | Persona switcher list. Each business has `usualSupplierIds`. |
+| `GET /api/suppliers` | Supplier dropdown, plus the catalog for hints. |
+| `POST /api/orders` `{businessId, supplierId, text}` | Order form. Returns `201 {order, pool, scrapOffers, parsedBy}`. |
+| `GET /api/orders` (header **required**) | "My orders", each with `pool`. |
+| `GET /api/pools` / `GET /api/pools/:id` | Pool card or progress bar (with header), or the operator table (no header). |
+| `POST /api/pools/:id/close` | Operator "Close pool" button. Returns `{purchaseOrder, invoices}`. A second click returns 409. |
+| `GET /api/scrap-offers` (header **required**) | Scrap offer inbox. |
+| `PUT /api/matches/:matchId/respond` `{status:'accepted'\|'declined'}` (header) | Accept or decline. Show buttons **only when `role === 'holder'`**; anyone else gets 403. |
+| `GET /api/metrics` | Metrics strip. |
+| `POST /api/demo/reset` | Hidden "Reset demo" button. |
 
 Errors always come back as `{ error: string }` with a 4xx status: 400, 403, 404 or 422. Show `error` to the user rather than a generic failure.
 
@@ -69,9 +73,16 @@ Errors always come back as `{ error: string }` with a 4xx status: 400, 403, 404 
 4. Viewing as Operator, close the Detroit pool. The PO email and Stripe charges appear.
 5. The metrics strip updates.
 
-## Known stub quirks (expected, will be fixed)
+## Exact demo numbers (after `POST /api/demo/reset`)
 
-- **Stub IDs don't line up yet.** Stubs reference `biz-001` and `pool-stub-001`, but `GET /api/businesses` still returns the 3 old businesses with random IDs that change on every restart. Never hardcode IDs; always read them from the API. Stable seed IDs arrive with prompt 2.
-- **`usualSupplierIds` isn't on businesses yet** (prompt 2).
-- **Stubs ignore input.** Every order returns the same sample, and the stub scrap reasoning doesn't match the order.
-- **Accepting a scrap offer returns 404** until prompt 6. Show the error and move on.
+| Step | What the API returns |
+|---|---|
+| Greektown views pools before ordering | 2 members, 78.14%, next milestone "Free delivery at $350.00", $76.50 to go |
+| Greektown orders "3 cases of 8 oz cups and 3 gallons of cleaner" | 3 members, 100%, alone $144.00 → pooled $99.00, **saves $45.00** |
+| Corktown / Midtown after that | Save $45.00 and $52.50 (free delivery for everyone) |
+| Furniture maker orders "60 2x4s and 10 sheets of 3/4 plywood" | 1 scrap offer: "A farm 11 mi away", 114 lbs at $0.056/lb |
+| Furniture maker accepts | Both sides now see real names |
+| Operator closes `pool-detroit-01` | PO total $372.50 with free delivery; 3 invoices |
+| Metrics | $142.50 saved, 2 deliveries avoided, 114 lbs diverted, $378.88 kept in Michigan |
+
+`parsedBy` and `reasoningBy` say `fallback` and `template` until watsonx keys are set in `backend/.env`. With keys, they say `granite`.

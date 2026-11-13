@@ -1,73 +1,76 @@
 import { Request, Response } from 'express';
-import { Order, PoolView, ScrapOffer } from '../types';
+import { v4 as uuidv4 } from 'uuid';
+import { db } from '../models/store';
+import { Order } from '../types';
+import { parseOrder } from '../services/parser';
+import { findOrCreatePool, joinPool, buildPoolView } from '../services/pools';
+import { inferAndOffer } from '../services/scrap';
 
-// ── Stub data ──────────────────────────────────────────────────────────────────
+// ── POST /api/orders (spec §8A) ───────────────────────────────────────────────
 
-const STUB_ORDER: Order = {
-  id: 'ord-stub-001',
-  businessId: 'biz-001',
-  supplierId: 'sup-001',
-  rawText: '3 cases paper towels and 2 packs all-purpose cleaner',
-  lines: [
-    { sku: 'PT-100', name: 'Paper Towels (case/12)', qty: 3, unit: 'case', soloUnitPrice: 38.00 },
-    { sku: 'CLN-500', name: 'All-Purpose Cleaner (gal, 4-pk)', qty: 2, unit: 'pack', soloUnitPrice: 29.00 },
-  ],
-  poolId: 'pool-stub-001',
-  parsedBy: 'fallback',
-  status: 'pooled',
-  createdAt: new Date().toISOString(),
-};
+export async function createOrder(req: Request, res: Response): Promise<void> {
+  try {
+    const { businessId, supplierId, text } = (req.body ?? {}) as { businessId?: unknown; supplierId?: unknown; text?: unknown };
+    if (typeof businessId !== 'string' || typeof supplierId !== 'string' || typeof text !== 'string' || !text.trim()) {
+      res.status(400).json({ error: 'businessId, supplierId, and text are required' });
+      return;
+    }
+    if (text.length > 2000) {
+      res.status(400).json({ error: 'Order text is too long (2000 characters max)' });
+      return;
+    }
+    const business = db.businesses.find((b) => b.id === businessId);
+    if (!business) {
+      res.status(404).json({ error: 'Business not found' });
+      return;
+    }
+    const supplier = db.suppliers.find((s) => s.id === supplierId);
+    if (!supplier) {
+      res.status(404).json({ error: 'Supplier not found' });
+      return;
+    }
 
-const STUB_POOL_VIEW: PoolView = {
-  id: 'pool-stub-001',
-  supplierName: 'Motor City Restaurant Supply',
-  deadline: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-  status: 'open',
-  memberCount: 3,
-  progressPct: 87,
-  nextMilestone: { label: 'Free delivery at $400', amountNeeded: 52.00 },
-  yourOrderId: 'ord-stub-001',
-  yourSoloCost: 172.00,
-  yourPooledCost: 148.00,
-  yourSavings: 24.00,
-};
+    const { lines, parsedBy } = await parseOrder(text, supplier);
+    if (lines.length === 0) {
+      const examples = supplier.catalog.slice(0, 3).map((c) => c.aliases[0] ?? c.name).join(', ');
+      res.status(422).json({ error: `We couldn't match anything in that order to ${supplier.name}'s catalog. Try naming items like: ${examples}.` });
+      return;
+    }
 
-const STUB_SCRAP_OFFERS: ScrapOffer[] = [
-  {
-    matchId: 'match-scrap-001',
-    role: 'holder',
-    material: 'Wood offcuts / chips',
-    estQty: 50,
-    unit: 'lbs',
-    readyInDays: 5,
-    suggestedPricePerUnit: 0.08,
-    counterpartyLabel: 'A farm 18 mi away',
-    distanceMiles: 18,
-    aiReasoning: 'Your paper goods order implies packaging offcuts. A nearby farm has requested wood chips for animal bedding — this is a good match.',
-    status: 'pending',
-  },
-];
+    // Re-read the open pool after the await so concurrent orders land in the same pool.
+    const pool = findOrCreatePool(supplier.id);
+    const incoming: Order = {
+      id: uuidv4(),
+      businessId,
+      supplierId,
+      rawText: text,
+      lines,
+      poolId: pool.id,
+      parsedBy,
+      status: 'pooled',
+      createdAt: new Date().toISOString(),
+    };
+    // joinPool merges into this business's existing order if it has one; use what it returns.
+    const order = joinPool(pool, incoming);
+    const scrapOffers = await inferAndOffer(order, lines, supplier);
 
-// ── Handlers ──────────────────────────────────────────────────────────────────
-
-export function createOrder(req: Request, res: Response): void {
-  const { businessId, supplierId, text } = req.body ?? {};
-  if (!businessId || !supplierId || !text) {
-    res.status(422).json({ error: 'businessId, supplierId, and text are required' });
-    return;
+    res.status(201).json({ order, pool: buildPoolView(pool.id, businessId), scrapOffers, parsedBy });
+  } catch (err) {
+    console.error('[orders] create failed', err);
+    res.status(500).json({ error: 'Could not place the order' });
   }
-  res.status(201).json({
-    order: { ...STUB_ORDER, businessId, supplierId, rawText: text as string },
-    pool: STUB_POOL_VIEW,
-    scrapOffers: STUB_SCRAP_OFFERS,
-    parsedBy: 'fallback',
-  });
 }
 
+// ── GET /api/orders (header X-Business-Id) ────────────────────────────────────
+
 export function getOrders(req: Request, res: Response): void {
-  const businessId = req.headers['x-business-id'] as string | undefined;
-  const orders: (Order & { pool: PoolView })[] = [
-    { ...STUB_ORDER, businessId: businessId ?? 'biz-001', pool: STUB_POOL_VIEW },
-  ];
+  const businessId = req.header('x-business-id');
+  if (!businessId) {
+    res.status(400).json({ error: 'X-Business-Id header required' });
+    return;
+  }
+  const orders = db.orders
+    .filter((o) => o.businessId === businessId)
+    .map((o) => ({ ...o, pool: buildPoolView(o.poolId, businessId) }));
   res.json(orders);
 }

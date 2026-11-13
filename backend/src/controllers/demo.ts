@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
+import { reseed } from '../models/store';
 
 export function resetDemo(_req: Request, res: Response): void {
-  // Phase-0 stub: future implementation will reseed the in-memory store (§10)
+  reseed();
   res.json({ ok: true });
 }
